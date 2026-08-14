@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f47b20">
+<title>VolleyScout TR</title>
+<style>
+:root{--o:#f47b20;--od:#d85f08;--ol:#fff1e6;--bg:#fffaf6;--ink:#2b211b;--mut:#75685f;--line:#efdccd;--danger:#b42318}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(#fff8f2,#fff 280px);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+.top{position:sticky;top:0;z-index:20;background:var(--o);color:#fff;padding:12px 14px;display:flex;align-items:center;gap:10px;box-shadow:0 2px 12px #0002}
+.top b{font-size:18px}.grow{flex:1}.muted{color:var(--mut);font-size:13px}
+button,input,select,textarea{font:inherit}
+button{border:1px solid var(--o);border-radius:12px;padding:10px 13px;font-weight:700;background:#fff;color:var(--ink);cursor:pointer}
+button.primary{background:var(--o);color:#fff}.danger{color:var(--danger);border-color:#efb4ae;background:#fff}
+.secondary{background:#f7f3ef;border-color:#e8d8cc}.icon{font-size:20px;padding:7px 11px}
+main{max-width:1080px;margin:auto;padding:20px 14px 100px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 3px 12px #00000008}
+.action{text-align:left;min-height:108px}.action strong{display:block;margin:10px 0 4px;font-size:17px}
+.section{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:20px 0 10px}.toolbar{display:flex;gap:7px;flex-wrap:wrap}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}.stat{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;text-align:center}.stat b{display:block;color:var(--od);font-size:24px}
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;margin:8px 0}.row .grow{min-width:170px}
+.field{margin:10px 0}.field label{display:block;font-size:12px;color:var(--mut);margin-bottom:5px}.field input,.field select,.field textarea{width:100%;padding:11px;border:1px solid var(--line);border-radius:12px;background:#fff}.field textarea{min-height:90px}
+.form-actions{display:flex;justify-content:flex-end;gap:8px;position:sticky;bottom:0;background:#fff;padding:10px 0 0;margin-top:14px}
+.drawer{position:fixed;inset:0;background:#0006;z-index:50;display:none}.drawer.open{display:block}.panel{width:min(390px,90vw);height:100%;background:#fff;padding:16px;overflow:auto}.menu{display:block;width:100%;text-align:left;margin:5px 0;border-color:#eee}.menu:hover{background:var(--ol)}
+.modal{position:fixed;inset:0;background:#0007;z-index:60;display:none;align-items:center;justify-content:center}.modal.open{display:flex}.sheet{width:min(760px,94vw);max-height:92vh;overflow:auto;background:#fff;border-radius:20px;padding:18px}
+.notice{padding:11px 13px;border-radius:12px;background:var(--ol);border:1px solid #ffd5b4;color:#8b4b16}.pill{display:inline-block;padding:4px 8px;border-radius:999px;background:var(--ol);color:var(--od);font-size:12px}
+.score{display:flex;justify-content:center;gap:34px;font-size:48px;font-weight:900;margin:12px}.score small{display:block;text-align:center;font-size:12px;color:var(--mut)}
+.event{border:1px solid var(--line);border-radius:11px;padding:9px;margin:6px 0}.empty{text-align:center;padding:24px}
+table{width:100%;border-collapse:collapse}th,td{padding:8px;border-bottom:1px solid var(--line);text-align:left;font-size:13px}
+.photo{width:92px;height:92px;object-fit:cover;border-radius:20px;background:var(--ol);display:flex;align-items:center;justify-content:center;font-size:40px}
+@media(max-width:720px){.grid,.grid3{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}.row .grow{min-width:130px}.sheet{border-radius:20px 20px 0 0;align-self:flex-end}}
+</style>
+</head>
+<body>
+<header class="top">
+<button class="icon" onclick="toggleDrawer()">☰</button>
+<div><b>🏐 VolleyScout TR</b><div id="ctx" style="font-size:12px">Voleybol • Kulüp spor yönetimi</div></div>
+<div class="grow"></div>
+<button class="icon" onclick="go('settings')">⚙️</button>
+</header>
+
+<div id="drawer" class="drawer" onclick="if(event.target===this)toggleDrawer()">
+<div class="panel">
+<button onclick="toggleDrawer()">✕ Kapat</button>
+<h2>VolleyScout TR</h2>
+<button class="menu" onclick="go('home')">🏠 Ana Sayfa</button>
+<button class="menu" onclick="go('clubs')">🏢 Kulüpler</button>
+<button class="menu" onclick="go('seasons')">📅 Sezonlar</button>
+<button class="menu" onclick="go('teams')">👥 Takımlar</button>
+<button class="menu" onclick="go('athletes')">🧑‍🏫 Sporcular</button>
+<button class="menu" onclick="go('matches')">🏐 Maçlar</button>
+<button class="menu" onclick="go('tests')">🧪 Testler</button>
+<button class="menu" onclick="go('training')">📝 Antrenman</button>
+<button class="menu" onclick="go('analysis')">📊 Analiz</button>
+<button class="menu" onclick="go('reports')">📄 Raporlar</button>
+<button class="menu" onclick="go('settings')">⚙️ Ayarlar & Yedekleme</button>
+</div></div>
+
+<main id="app"></main>
+<div id="modal" class="modal" onclick="if(event.target===this)requestClose()"><div id="sheet" class="sheet"></div></div>
+
+<script>
+const K='VS_TR_MASTER_1';
+const EMPTY={clubs:[],seasons:[],teams:[],players:[],matches:[],events:[],tests:[],training:[],attendance:[]};
+let d=loadData();
+let s={page:'home',club:null,season:null,team:null,player:null,match:null,dirty:false};
+
+function loadData(){
+  let x={};
+  try{x=JSON.parse(localStorage.getItem(K)||'{}')||{}}catch(e){}
+  for(const k of Object.keys(EMPTY)) if(!Array.isArray(x[k])) x[k]=[];
+  return x;
+}
+const $=id=>document.getElementById(id);
+const esc=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));
+const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+function persist(){localStorage.setItem(K,JSON.stringify(d))}
+function toggleDrawer(){$('drawer').classList.toggle('open')}
+function go(p){toggleDrawer();page(p)}
+function page(p){s.page=p;s.dirty=false;render()}
+function club(){return d.clubs.find(x=>x.id===s.club)}
+function season(){return d.seasons.find(x=>x.id===s.season)}
+function team(){return d.teams.find(x=>x.id===s.team)}
+function markDirty(){s.dirty=true}
+function modal(html,dirty=false){$('sheet').innerHTML=html;$('modal').classList.add('open');s.dirty=dirty}
+function close(){ $('modal').classList.remove('open');s.dirty=false}
+function requestClose(){if(s.dirty&&!confirm('Kaydedilmemiş değişiklik var. Kapatırsan kaybolacak. Kapatılsın mı?'))return;close()}
+function formButtons(fn){return `<div class="form-actions"><button class="secondary" onclick="requestClose()">Vazgeç</button><button class="primary" onclick="${fn}">Kaydet</button></div>`}
+function confirmDelete(name){return confirm('"' + name + '" silinsin mi? Bu işlem geri alınamaz.')}
+
+function greeting(){
+  const h=new Date().getHours(), name=club()?.coach||'GÜLNUR';
+  if(h>=5&&h<11)return `Günaydın, ${esc(name)} 🌅`;
+  if(h>=11&&h<18)return `İyi çalışmalar, ${esc(name)} ☀️`;
+  if(h>=18&&h<23)return `İyi akşamlar, ${esc(name)} 🌆`;
+  return `İyi geceler, ${esc(name)} 🌙`;
+}
+function render(){
+  const c=club();
+  $('ctx').textContent=c?`${c.name} • Voleybol • ${season()?.name||''}`:'Voleybol • Kulüp spor yönetimi';
+  const pages={home,clubs,seasons,teams,teamPage,athletes,athletePage,attendancePage,matches,matchPage,tests,training,analysis,reports,settings};
+  $('app').innerHTML=(pages[s.page]||home)();
+}
+function home(){
+  const c=club();
+  if(!c)return `<div class="card"><h1>🏐 VolleyScout TR</h1><p>Voleybol için kulüp, takım, sporcu, yoklama, test, antrenman ve maç yönetimi.</p><button class="primary" onclick="clubForm()">🏢 İlk Kulübü Oluştur</button></div>`;
+  return `<h1>${greeting()} 👋</h1>
+  <p class="muted">${esc(c.name)} • Voleybol • ${esc(season()?.name||'Sezon seçilmedi')}</p>
+  <div class="grid">
+    <button class="card action" onclick="page('athletes')">🧑‍🏫<strong>Sporcular</strong><span class="muted">Spor okulu, yoklama, test ve profil</span></button>
+    <button class="card action" onclick="newMatch()">🏐<strong>Yeni Maç</strong><span class="muted">Manuel veya video + canlı</span></button>
+    <button class="card action" onclick="page('matches')">🗂️<strong>Eski Maçlar</strong><span class="muted">Maç geçmişi ve olaylar</span></button>
+    <button class="card action" onclick="page('analysis')">📊<strong>Sezon Özeti</strong><span class="muted">Performans ve gelişim</span></button>
+  </div>
+  <div class="section"><h2>Sezon Özeti</h2></div>
+  <div class="stats"><div class="stat"><b>${d.players.length}</b><small>Sporcu</small></div><div class="stat"><b>${d.matches.length}</b><small>Maç</small></div><div class="stat"><b>${d.tests.length}</b><small>Test</small></div><div class="stat"><b>${d.training.length}</b><small>Antrenman</small></div></div>`;
+}
+
+/* KULÜP / SEZON / TAKIM */
+function clubs(){
+ return `<div class="section"><div><h2>🏢 Kulüpler</h2><div class="muted">Ekle, düzenle, seç veya sil.</div></div><button class="primary" onclick="clubForm()">+ Kulüp</button></div>
+ ${d.clubs.map(c=>`<div class="row"><div class="grow"><b>${esc(c.name)}</b><div class="muted">${esc(c.coach||'')} • Voleybol</div></div><button onclick="selectClub('${c.id}')">Aç</button><button onclick="clubForm('${c.id}')">✏️</button><button class="danger" onclick="deleteClub('${c.id}')">🗑️</button></div>`).join('')||'<div class="card empty muted">Henüz kulüp yok.</div>'}`;
+}
+function clubForm(cid=''){
+ let c=d.clubs.find(x=>x.id===cid)||{};
+ modal(`<h2>${cid?'✏️ Kulübü Düzenle':'🏢 Kulüp'}</h2>
+ <div class="field"><label>Kulüp adı</label><input id="cn" value="${esc(c.name)}" oninput="markDirty()"></div>
+ <div class="field"><label>Antrenör</label><input id="cc" value="${esc(c.coach)}" oninput="markDirty()"></div>
+ <div class="notice">Branş: 🏐 Voleybol</div>${formButtons(cid?`updateClub('${cid}')`:'createClub()')}`,!!cid);
+}
+function createClub(){let c={id:uid('c'),name:$('cn').value.trim()||'Kulüp',coach:$('cc').value.trim()||'GÜLNUR',sport:'Voleybol'};d.clubs.push(c);s.club=c.id;close();persist();page('clubs')}
+function updateClub(id){let c=d.clubs.find(x=>x.id===id);if(!c)return;c.name=$('cn').value.trim()||c.name;c.coach=$('cc').value.trim()||c.coach;close();persist();render()}
+function deleteClub(id){let c=d.clubs.find(x=>x.id===id);if(!c||!confirmDelete(c.name))return;let tids=d.teams.filter(t=>t.clubId===id).map(t=>t.id);if(d.players.some(p=>tids.includes(p.teamId))||d.matches.some(m=>tids.includes(m.teamId))||d.training.some(t=>tids.includes(t.teamId))){alert('Bu kulübe bağlı kayıtlar var. Önce ilgili kayıtları taşı/sil.');return}d.teams=d.teams.filter(t=>t.clubId!==id);d.seasons=d.seasons.filter(x=>x.clubId!==id);d.clubs=d.clubs.filter(x=>x.id!==id);if(s.club===id){s.club=d.clubs[0]?.id||null;s.season=d.seasons[0]?.id||null;s.team=null}persist();render()}
+function selectClub(id){s.club=id;s.season=d.seasons.find(x=>x.clubId===id)?.id||null;s.team=d.teams.find(x=>x.clubId===id)?.id||null;persist();page('home')}
+function seasons(){
+ let xs=d.seasons.filter(x=>!s.club||x.clubId===s.club);
+ return `<div class="section"><div><h2>📅 Sezonlar</h2></div><button class="primary" onclick="seasonForm()">+ Sezon</button></div>
+ ${xs.map(x=>`<div class="row"><div class="grow"><b>${esc(x.name)}</b><div class="muted">${esc(d.clubs.find(c=>c.id===x.clubId)?.name||'')} • ${esc(x.status||'Aktif')}</div></div><button onclick="selectSeason('${x.id}')">Aç</button><button onclick="seasonForm('${x.id}')">✏️</button><button class="danger" onclick="deleteSeason('${x.id}')">🗑️</button></div>`).join('')||'<div class="card empty muted">Henüz sezon yok.</div>'}`;
+}
+function seasonForm(id=''){
+ let x=d.seasons.find(q=>q.id===id)||{},clubs=d.clubs;
+ modal(`<h2>${id?'✏️ Sezonu Düzenle':'📅 Sezon'}</h2>
+ <div class="field"><label>Kulüp</label><select id="sc">${clubs.map(c=>`<option value="${c.id}" ${c.id===(x.clubId||s.club)?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div>
+ <div class="field"><label>Sezon</label><input id="sn" value="${esc(x.name||'2026–2027')}" oninput="markDirty()"></div>
+ <div class="field"><label>Durum</label><select id="sst"><option ${x.status!=='Kapalı'?'selected':''}>Aktif</option><option ${x.status==='Kapalı'?'selected':''}>Kapalı</option></select></div>
+ ${formButtons(id?`updateSeason('${id}')`:'createSeason()')}`,!!id);
+}
+function createSeason(){let x={id:uid('s'),clubId:$('sc').value,name:$('sn').value||'2026–2027',status:$('sst').value};d.seasons.push(x);s.club=x.clubId;s.season=x.id;close();persist();page('seasons')}
+function updateSeason(id){let x=d.seasons.find(q=>q.id===id);if(!x)return;x.clubId=$('sc').value;x.name=$('sn').value||x.name;x.status=$('sst').value;s.club=x.clubId;s.season=x.id;close();persist();render()}
+function selectSeason(id){let x=d.seasons.find(q=>q.id===id);s.season=id;s.club=x?.clubId||s.club;s.team=d.teams.find(t=>t.seasonId===id)?.id||null;persist();page('home')}
+function deleteSeason(id){let x=d.seasons.find(q=>q.id===id);if(!x||!confirmDelete(x.name))return;if(d.teams.some(t=>t.seasonId===id)){alert('Bu sezona bağlı takım var. Önce takımı taşı/sil.');return}d.seasons=d.seasons.filter(q=>q.id!==id);persist();render()}
+function teams(){
+ let xs=d.teams.filter(x=>!s.club||x.clubId===s.club);
+ return `<div class="section"><div><h2>👥 Takımlar</h2><div class="muted">Ekle, düzenle, aç veya sil.</div></div><button class="primary" onclick="teamForm()">+ Takım</button></div>
+ ${xs.map(t=>`<div class="row"><div class="grow"><b>${esc(t.name)}</b><div class="muted">${esc(t.category)} • ${esc(t.group)} • ${esc(t.lig)}</div></div><button onclick="openTeam('${t.id}')">Aç</button><button onclick="teamForm('${t.id}')">✏️</button><button class="danger" onclick="deleteTeam('${t.id}')">🗑️</button></div>`).join('')||'<div class="card empty muted">Henüz takım yok.</div>'}`;
+}
+function teamForm(id=''){
+ let t=d.teams.find(x=>x.id===id)||{},clubs=d.clubs,clubId=t.clubId||s.club||clubs[0]?.id||'',seasons=d.seasons.filter(x=>x.clubId===clubId),seasonId=t.seasonId||s.season||seasons[0]?.id||'';
+ modal(`<h2>${id?'✏️ Takımı Düzenle':'👥 Takım'}</h2>
+ <div class="field"><label>Kulüp</label><select id="tclub" onchange="teamClubChanged()">${clubs.map(c=>`<option value="${c.id}" ${c.id===clubId?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div>
+ <div class="field"><label>Sezon</label><select id="tseason">${seasons.map(x=>`<option value="${x.id}" ${x.id===seasonId?'selected':''}>${esc(x.name)}</option>`).join('')}</select></div>
+ <div class="field"><label>Kategori</label><input id="tcat" value="${esc(t.category||'Yıldız')}" placeholder="Mini / Midi / Küçük / Yıldız / Özel" oninput="markDirty()"></div>
+ <div class="field"><label>Takım adı</label><input id="tname" value="${esc(t.name)}" placeholder="Yıldız A" oninput="markDirty()"></div>
+ <div class="field"><label>Grup</label><select id="tgroup">${['A','B','C','1','2','3','Özel'].map(x=>`<option ${x===t.group?'selected':''}>${x}</option>`).join('')}</select></div>
+ <div class="field"><label>Lig</label><select id="tlig">${['İstanbul Gelişim Ligi','2. Lig','1. Lig','Süper Lig','Özel Lig','Diğer'].map(x=>`<option ${x===t.lig?'selected':''}>${x}</option>`).join('')}</select></div>
+ ${formButtons(id?`updateTeam('${id}')`:'createTeam()')}`,!!id);
+}
+function teamClubChanged(){let ss=d.seasons.filter(x=>x.clubId===$('tclub').value);$('tseason').innerHTML=ss.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}
+function createTeam(){let t={id:uid('t'),clubId:$('tclub').value,seasonId:$('tseason').value,category:$('tcat').value||'Genel',name:$('tname').value||'Takım',group:$('tgroup').value,lig:$('tlig').value};d.teams.push(t);s.club=t.clubId;s.season=t.seasonId;s.team=t.id;close();persist();page('teams')}
+function updateTeam(id){let t=d.teams.find(x=>x.id===id);if(!t)return;t.clubId=$('tclub').value;t.seasonId=$('tseason').value;t.category=$('tcat').value||t.category;t.name=$('tname').value||t.name;t.group=$('tgroup').value;t.lig=$('tlig').value;s.club=t.clubId;s.season=t.seasonId;s.team=id;close();persist();page('teams')}
+function deleteTeam(id){let t=d.teams.find(x=>x.id===id);if(!t||!confirmDelete(t.name))return;if(d.players.some(p=>p.teamId===id)||d.matches.some(m=>m.teamId===id)||d.training.some(x=>x.teamId===id)){alert('Bu takımda bağlı kayıtlar var. Önce ilgili kayıtları taşı/sil.');return}d.teams=d.teams.filter(x=>x.id!==id);if(s.team===id)s.team=null;persist();render()}
+function openTeam(id){let t=d.teams.find(x=>x.id===id);if(!t)return;s.team=id;s.club=t.clubId;s.season=t.seasonId;page('teamPage')}
+function teamPage(){
+ let t=team();if(!t)return page('teams');let ps=d.players.filter(p=>p.teamId===t.id),ms=d.matches.filter(m=>m.teamId===t.id),tr=d.training.filter(x=>x.teamId===t.id);
+ return `<button onclick="page('teams')">← Takımlar</button><div class="card"><div class="section" style="margin:0"><div><h1>${esc(t.name)}</h1><p class="muted">${esc(t.category)} • ${esc(t.group)} • ${esc(t.lig)}</p></div><div class="toolbar"><button onclick="teamForm('${t.id}')">✏️</button><button class="danger" onclick="deleteTeam('${t.id}')">🗑️</button></div></div></div>
+ <div class="stats"><div class="stat"><b>${ps.length}</b><small>Oyuncu</small></div><div class="stat"><b>${ms.length}</b><small>Maç</small></div><div class="stat"><b>${tr.length}</b><small>Antrenman</small></div><div class="stat"><b>${d.tests.filter(x=>ps.some(p=>p.id===x.playerId)).length}</b><small>Test</small></div></div>
+ <div class="grid"><button class="card action" onclick="page('athletes')">🧑‍🏫<strong>Sporcular</strong></button><button class="card action" onclick="newMatch()">🏐<strong>Yeni Maç</strong></button><button class="card action" onclick="globalTestForm()">🧪<strong>Test Yap</strong></button><button class="card action" onclick="trainingForm()">📝<strong>Antrenman</strong></button></div>`;
+}
+
+/* SPORCULAR / YOKLAMA / TEST */
+function athleteScope(){return d.players.filter(p=>{if(!s.club)return true;let t=d.teams.find(t=>t.id===p.teamId);return !t||t.clubId===s.club})}
+function athletes(){
+ let ps=athleteScope();
+ return `<div class="section"><div><h2>🧑‍🏫 Sporcular</h2><div class="muted">Spor okulundaki tüm sporcular. Takıma bağlı olmak zorunda değiller.</div></div><button class="primary" onclick="athleteForm()">+ Sporcu</button></div>
+ <div class="grid"><button class="card action" onclick="page('attendancePage')">📝<strong>Yoklama</strong><span class="muted">Toplu devam takibi</span></button><button class="card action" onclick="globalTestForm()">🧪<strong>Test Uygula</strong><span class="muted">Y Testi, T Testi ve ölçümler</span></button></div>
+ <div class="field"><label>Arama</label><input placeholder="Ad soyad ara..." oninput="filterAthletes(this.value)"></div>
+ <div id="athList">${athleteRows(ps)}</div>`;
+}
+function athleteRows(ps){return ps.map(p=>{let t=d.teams.find(t=>t.id===p.teamId);return `<div class="row"><div class="grow"><b>#${esc(p.no||'-')} ${esc(p.name)}</b><div class="muted">${esc(p.position||'')} • ${esc(t?.name||'Spor Okulu / Takımsız')}</div></div><button onclick="openAthlete('${p.id}')">Aç</button><button onclick="athleteForm('${p.id}')">✏️</button><button class="danger" onclick="deleteAthlete('${p.id}')">🗑️</button></div>`}).join('')||'<div class="card empty muted">Henüz sporcu yok.</div>'}
+function filterAthletes(q){let z=(q||'').toLocaleLowerCase('tr-TR');let ps=athleteScope().filter(p=>(p.name||'').toLocaleLowerCase('tr-TR').includes(z));if($('athList'))$('athList').innerHTML=athleteRows(ps)}
+function athleteForm(id=''){
+ let p=d.players.find(x=>x.id===id)||{},ts=d.teams.filter(t=>!s.club||t.clubId===s.club);
+ modal(`<h2>${id?'✏️ Sporcuyu Düzenle':'🧑‍🏫 Sporcu Ekle'}</h2>
+ <div class="field"><label>Ad Soyad</label><input id="an" value="${esc(p.name)}" oninput="markDirty()"></div>
+ <div class="field"><label>Forma / No</label><input id="ano" type="number" value="${esc(p.no)}" oninput="markDirty()"></div>
+ <div class="field"><label>Mevki</label><input id="ap" value="${esc(p.position)}" placeholder="Pasör / Smaçör / Orta / Libero / Pasör Çaprazı" oninput="markDirty()"></div>
+ <div class="field"><label>Doğum Tarihi</label><input id="ab" type="date" value="${esc(p.birth)}" oninput="markDirty()"></div>
+ <div class="field"><label>Boy (cm)</label><input id="ah" type="number" value="${esc(p.height)}" oninput="markDirty()"></div>
+ <div class="field"><label>Kilo (kg)</label><input id="aw" type="number" value="${esc(p.weight)}" oninput="markDirty()"></div>
+ <div class="field"><label>Bağlı Takım (isteğe bağlı)</label><select id="at"><option value="">Spor Okulu / Takımsız</option>${ts.map(t=>`<option value="${t.id}" ${t.id===p.teamId?'selected':''}>${esc(t.name)}</option>`).join('')}</select></div>
+ <div class="field"><label>Antrenör Notu</label><textarea id="anote" oninput="markDirty()">${esc(p.note)}</textarea></div>
+ ${formButtons(id?`updateAthlete('${id}')`:'createAthlete()')}`,!!id);
+}
+function createAthlete(){d.players.push({id:uid('p'),teamId:$('at').value||'',name:$('an').value.trim()||'Sporcu',no:$('ano').value,position:$('ap').value,birth:$('ab').value,height:$('ah').value,weight:$('aw').value,note:$('anote').value});close();persist();page('athletes')}
+function updateAthlete(id){let p=d.players.find(x=>x.id===id);if(!p)return;p.name=$('an').value.trim()||p.name;p.no=$('ano').value;p.position=$('ap').value;p.birth=$('ab').value;p.height=$('ah').value;p.weight=$('aw').value;p.teamId=$('at').value;p.note=$('anote').value;close();persist();page('athletes')}
+function deleteAthlete(id){let p=d.players.find(x=>x.id===id);if(!p||!confirmDelete(p.name))return;d.tests=d.tests.filter(x=>x.playerId!==id);d.attendance=d.attendance.filter(x=>x.playerId!==id);d.players=d.players.filter(x=>x.id!==id);persist();page('athletes')}
+function openAthlete(id){s.player=id;page('athletePage')}
+function athletePage(){
+ let p=d.players.find(x=>x.id===s.player);if(!p)return page('athletes');let t=d.teams.find(x=>x.id===p.teamId),at=d.attendance.filter(x=>x.playerId===p.id).sort((a,b)=>(b.date||'').localeCompare(a.date||'')),tx=d.tests.filter(x=>x.playerId===p.id).sort((a,b)=>(b.date||'').localeCompare(a.date||'')),pct=at.length?Math.round(at.filter(x=>x.status==='Katıldı').length/at.length*100):0;
+ return `<button onclick="page('athletes')">← Sporcular</button><div class="card"><div class="section" style="margin:0"><div><span class="pill">SPORCU PROFİLİ</span><h1>${esc(p.name)}</h1><p class="muted">#${esc(p.no||'-')} • ${esc(p.position||'')} • ${esc(t?.name||'Spor Okulu / Takımsız')}</p></div><div class="toolbar"><button onclick="athleteForm('${p.id}')">✏️ Düzenle</button><button class="danger" onclick="deleteAthlete('${p.id}')">🗑️ Sil</button></div></div>
+ <div class="stats"><div class="stat"><b>${pct}%</b><small>Yoklama</small></div><div class="stat"><b>${tx.length}</b><small>Test</small></div><div class="stat"><b>${p.height||'-'}</b><small>Boy cm</small></div><div class="stat"><b>${p.weight||'-'}</b><small>Kilo kg</small></div></div>
+ <p><b>Doğum:</b> ${esc(p.birth||'-')} • <b>Not:</b> ${esc(p.note||'-')}</p></div>
+ <div class="section"><h2>Hızlı İşlemler</h2></div><div class="grid">
+ <button class="card action" onclick="attendanceForm('${p.id}')">📝<strong>Yoklama Al</strong></button>
+ <button class="card action" onclick="globalTestForm('${p.id}')">🧪<strong>Test Uygula</strong></button>
+ <button class="card action" onclick="playerReport('${p.id}')">📄<strong>Veli Raporu</strong><span class="muted">Yazdır / PDF olarak kaydet</span></button>
+ <button class="card action" onclick="page('attendancePage')">📅<strong>Yoklama Geçmişi</strong></button></div>
+ <div class="section"><h2>🧪 Son Testler</h2></div><div class="card">${tx.slice(0,10).map(x=>`<div class="row"><div class="grow"><b>${esc(x.type)}</b><div class="muted">${esc(x.date)} • ${esc(x.result)} ${esc(x.unit||'')}</div></div><button onclick="testForm('${x.id}')">✏️</button><button class="danger" onclick="deleteTest('${x.id}')">🗑️</button></div>`).join('')||'<div class="muted">Test yok.</div>'}</div>
+ <div class="section"><h2>📝 Yoklama Geçmişi</h2></div><div class="card">${at.slice(0,15).map(x=>`<div class="row"><div class="grow"><b>${esc(x.date)}</b><div class="muted">${esc(x.status)}${x.note?' • '+esc(x.note):''}</div></div><button onclick="attendanceForm('${p.id}','${x.id}')">✏️</button><button class="danger" onclick="deleteAttendance('${x.id}')">🗑️</button></div>`).join('')||'<div class="muted">Yoklama yok.</div>'}</div>`;
+}
+function attendancePage(){
+ let ps=athleteScope(),date=new Date().toISOString().slice(0,10);
+ return `<div class="section"><div><h2>📝 Yoklama</h2><div class="muted">Spor okulu ve takım sporcuları için toplu yoklama.</div></div><button class="primary" onclick="attendanceForm()">+ Yoklama</button></div>
+ <div class="card"><div class="field"><label>Tarih</label><input id="bulkDate" type="date" value="${date}"></div><button class="primary" onclick="bulkAttendance()">Tümünü Katıldı</button><button class="secondary" onclick="bulkStatus('Gelmedi')">Tümünü Gelmedi</button></div>
+ ${ps.map(p=>{let a=d.attendance.find(x=>x.playerId===p.id&&x.date===($('bulkDate')?.value||date));return `<div class="row"><div class="grow"><b>${esc(p.name)}</b><div class="muted">${esc(a?.status||'Kayıt yok')}</div></div><button onclick="attendanceForm('${p.id}','${a?.id||''}')">✏️</button></div>`}).join('')||'<div class="card empty muted">Önce sporcu ekle.</div>'}`;
+}
+function attendanceForm(pid='',aid=''){
+ let old=d.attendance.find(x=>x.id===aid)||{},p=d.players.find(x=>x.id===(pid||old.playerId))||athleteScope()[0];
+ if(!p){alert('Önce sporcu ekle.');return}
+ modal(`<h2>${aid?'✏️ Yoklama Düzenle':'📝 Yoklama'}</h2>
+ <div class="field"><label>Sporcu</label><select id="attp">${athleteScope().map(x=>`<option value="${x.id}" ${x.id===p.id?'selected':''}>${esc(x.name)}</option>`).join('')}</select></div>
+ <div class="field"><label>Tarih</label><input id="attd" type="date" value="${esc(old.date||new Date().toISOString().slice(0,10))}"></div>
+ <div class="field"><label>Durum</label><select id="atts">${['Katıldı','Geç kaldı','İzinli','Gelmedi'].map(x=>`<option ${x===(old.status||'Katıldı')?'selected':''}>${x}</option>`).join('')}</select></div>
+ <div class="field"><label>Not</label><input id="attn" value="${esc(old.note)}"></div>${formButtons(aid?`updateAttendance('${aid}')`:'createAttendance()')}`,!!aid);
+}
+function createAttendance(){let exists=d.attendance.find(x=>x.playerId===$('attp').value&&x.date===$('attd').value);if(exists){alert('Bu sporcu için bu tarihte zaten kayıt var.');return}d.attendance.push({id:uid('a'),playerId:$('attp').value,date:$('attd').value,status:$('atts').value,note:$('attn').value});close();persist();page('attendancePage')}
+function updateAttendance(id){let a=d.attendance.find(x=>x.id===id);if(!a)return;a.playerId=$('attp').value;a.date=$('attd').value;a.status=$('atts').value;a.note=$('attn').value;close();persist();page('attendancePage')}
+function deleteAttendance(id){let a=d.attendance.find(x=>x.id===id);if(!a||!confirmDelete('Yoklama'))return;d.attendance=d.attendance.filter(x=>x.id!==id);persist();render()}
+function bulkAttendance(){let date=$('bulkDate').value;athleteScope().forEach(p=>{let a=d.attendance.find(x=>x.playerId===p.id&&x.date===date);if(a)a.status='Katıldı';else d.attendance.push({id:uid('a'),playerId:p.id,date,status:'Katıldı',note:''})});persist();render()}
+function bulkStatus(status){let date=$('bulkDate').value;athleteScope().forEach(p=>{let a=d.attendance.find(x=>x.playerId===p.id&&x.date===date);if(a)a.status=status;else d.attendance.push({id:uid('a'),playerId:p.id,date,status,note:''})});persist();render()}
+
+const TESTS=['Y Testi','T Testi','Dikey Sıçrama','Sprint','Reaksiyon','Boy','Kilo','Servis','Manşet','Pas','Hücum','Blok'];
+function globalTestForm(pid=''){
+ let ps=athleteScope();if(pid){let p=d.players.find(x=>x.id===pid);if(p)ps=[p]}if(!ps.length){alert('Önce sporcu ekle.');return}
+ modal(`<h2>🧪 Sporcu Testi</h2><div class="field"><label>Sporcu</label><select id="gxp">${ps.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select></div>
+ <div class="field"><label>Test</label><select id="gxt">${TESTS.map(x=>`<option>${x}</option>`).join('')}</select></div>
+ <div class="field"><label>Sonuç</label><input id="gxr" placeholder="Örn. 2.85"></div><div class="field"><label>Birim</label><input id="gxu" placeholder="cm / sn / tekrar / %"></div>
+ <div class="field"><label>Tarih</label><input id="gxd" type="date" value="${new Date().toISOString().slice(0,10)}"></div>${formButtons('createGlobalTest()')}`);
+}
+function createGlobalTest(){d.tests.push({id:uid('x'),playerId:$('gxp').value,type:$('gxt').value,result:$('gxr').value,unit:$('gxu').value,date:$('gxd').value});close();persist();page('athletes')}
+function tests(){
+ let xs=d.tests;
+ return `<div class="section"><div><h2>🧪 Testler</h2><div class="muted">Y Testi, T Testi ve voleybola özel ölçümler.</div></div><button class="primary" onclick="globalTestForm()">+ Test</button></div>
+ ${xs.map(x=>{let p=d.players.find(p=>p.id===x.playerId);return `<div class="row"><div class="grow"><b>${esc(p?.name||'Sporcu')} — ${esc(x.type)}</b><div class="muted">${esc(x.result)} ${esc(x.unit||'')} • ${esc(x.date)}</div></div><button onclick="testForm('${x.id}')">✏️</button><button class="danger" onclick="deleteTest('${x.id}')">🗑️</button></div>`}).join('')||'<div class="card empty muted">Henüz test yok.</div>'}`;
+}
+function testForm(id=''){
+ let x=d.tests.find(q=>q.id===id)||{},ps=athleteScope();
+ modal(`<h2>${id?'✏️ Testi Düzenle':'🧪 Test'}</h2><div class="field"><label>Sporcu</label><select id="xp">${ps.map(p=>`<option value="${p.id}" ${p.id===x.playerId?'selected':''}>${esc(p.name)}</option>`).join('')}</select></div>
+ <div class="field"><label>Test</label><select id="xt">${TESTS.map(t=>`<option ${t===x.type?'selected':''}>${t}</option>`).join('')}</select></div><div class="field"><label>Sonuç</label><input id="xr" value="${esc(x.result)}"></div><div class="field"><label>Birim</label><input id="xu" value="${esc(x.unit)}"></div><div class="field"><label>Tarih</label><input id="xd" type="date" value="${esc(x.date||new Date().toISOString().slice(0,10))}"></div>${formButtons(id?`updateTest('${id}')`:'createTest()')}`,!!id);
+}
+function createTest(){d.tests.push({id:uid('x'),playerId:$('xp').value,type:$('xt').value,result:$('xr').value,unit:$('xu').value,date:$('xd').value});close();persist();render()}
+function updateTest(id){let x=d.tests.find(q=>q.id===id);if(!x)return;x.playerId=$('xp').value;x.type=$('xt').value;x.result=$('xr').value;x.unit=$('xu').value;x.date=$('xd').value;close();persist();render()}
+function deleteTest(id){let x=d.tests.find(q=>q.id===id);if(!x||!confirmDelete(x.type))return;d.tests=d.tests.filter(q=>q.id!==id);persist();render()}
+
+/* ANTRENMAN */
+function training(){
+ let xs=d.training.filter(x=>!s.club||d.teams.find(t=>t.id===x.teamId)?.clubId===s.club);
+ return `<div class="section"><div><h2>📝 Antrenman</h2><div class="muted">Ekle, düzenle veya sil.</div></div><button class="primary" onclick="trainingForm()">+ Antrenman</button></div>
+ ${xs.map(x=>`<div class="row"><div class="grow"><b>${esc(x.title)}</b><div class="muted">${esc(x.date)} • ${esc(x.duration)} dk • Katılım ${esc(x.att)}</div><div>${esc(x.note||'')}</div></div><button onclick="trainingForm('${x.id}')">✏️</button><button class="danger" onclick="deleteTraining('${x.id}')">🗑️</button></div>`).join('')||'<div class="card empty muted">Henüz antrenman yok.</div>'}`;
+}
+function trainingForm(id=''){
+ let x=d.training.find(q=>q.id===id)||{},ts=d.teams.filter(t=>!s.club||t.clubId===s.club),cur=x.teamId||s.team||ts[0]?.id||'';
+ if(!ts.length){alert('Önce takım oluştur.');return}
+ modal(`<h2>${id?'✏️ Antrenmanı Düzenle':'📝 Antrenman'}</h2><div class="field"><label>Takım</label><select id="trteam">${ts.map(t=>`<option value="${t.id}" ${t.id===cur?'selected':''}>${esc(t.name)}</option>`).join('')}</select></div>
+ <div class="field"><label>Başlık</label><input id="tt" value="${esc(x.title)}" placeholder="Servis-Karşılama"></div><div class="field"><label>Tarih</label><input id="td" type="date" value="${esc(x.date||new Date().toISOString().slice(0,10))}"></div>
+ <div class="field"><label>Süre (dk)</label><input id="tdur" type="number" value="${esc(x.duration||90)}"></div><div class="field"><label>Katılım</label><input id="ta" value="${esc(x.att||'')}" placeholder="12/14"></div><div class="field"><label>Not</label><textarea id="tnote">${esc(x.note)}</textarea></div>
+ ${formButtons(id?`updateTraining('${id}')`:'createTraining()')}`,!!id);
+}
+function createTraining(){d.training.push({id:uid('tr'),teamId:$('trteam').value,title:$('tt').value||'Antrenman',date:$('td').value,duration:$('tdur').value,att:$('ta').value,note:$('tnote').value});s.team=$('trteam').value;close();persist();page('training')}
+function updateTraining(id){let x=d.training.find(q=>q.id===id);if(!x)return;x.teamId=$('trteam').value;x.title=$('tt').value||x.title;x.date=$('td').value;x.duration=$('tdur').value;x.att=$('ta').value;x.note=$('tnote').value;s.team=x.teamId;close();persist();render()}
+function deleteTraining(id){let x=d.training.find(q=>q.id===id);if(!x||!confirmDelete(x.title))return;d.training=d.training.filter(q=>q.id!==id);persist();render()}
+
+/* MAÇ */
+function defaultFormat(lig){if(lig==='Özel Lig')return '2 Set';if(lig==='İstanbul Gelişim Ligi'||lig==='2. Lig')return '3 Set';return '5 Set'}
+function newMatch(){matchForm()}
+function matches(){
+ let xs=d.matches.filter(m=>!s.club||d.teams.find(t=>t.id===m.teamId)?.clubId===s.club);
+ return `<div class="section"><div><h2>🏐 Maçlar</h2><div class="muted">Manuel hızlı kayıt veya video + canlı mod.</div></div><button class="primary" onclick="newMatch()">+ Yeni Maç</button></div>
+ ${xs.map(m=>`<div class="row"><div class="grow"><b>${esc(m.teamName)} – ${esc(m.opp)}</b><div class="muted">${esc(m.date)} • ${esc(m.format)} • ${esc(m.mode)} • ${esc(m.status)}</div></div><button onclick="openMatch('${m.id}')">Aç</button><button onclick="matchForm('${m.id}')">✏️</button><button class="danger" onclick="deleteMatch('${m.id}')">🗑️</button></div>`).join('')||'<div class="card empty muted">Henüz maç yok.</div>'}`;
+}
+function matchForm(id=''){
+ let m=d.matches.find(x=>x.id===id)||{},ts=d.teams.filter(t=>!s.club||t.clubId===s.club),cur=m.teamId||s.team||ts[0]?.id||'';if(!ts.length){alert('Önce takım oluştur.');return}
+ let t=d.teams.find(x=>x.id===cur)||ts[0],def=m.format||defaultFormat(t.lig);
+ modal(`<h2>${id?'✏️ Maçı Düzenle':'🏐 Yeni Maç'}</h2><div class="field"><label>Takım</label><select id="mt">${ts.map(t=>`<option value="${t.id}" ${t.id===cur?'selected':''}>${esc(t.name)}</option>`).join('')}</select></div>
+ <div class="field"><label>Rakip</label><input id="mopp" value="${esc(m.opp)}"></div><div class="field"><label>Tarih</label><input id="md" type="date" value="${esc(m.date||new Date().toISOString().slice(0,10))}"></div>
+ <div class="field"><label>Kayıt Modu</label><select id="mm"><option ${m.mode==='Manuel Hızlı'||!m.mode?'selected':''}>Manuel Hızlı</option><option ${m.mode==='Video + Canlı'?'selected':''}>Video + Canlı</option></select></div>
+ <div class="field"><label>Set Formatı</label><select id="mf">${['2 Set','3 Set','5 Set'].map(x=>`<option ${x===def?'selected':''}>${x}</option>`).join('')}</select></div>
+ <div class="notice">Varsayılan: ${esc(def)}. İstersen maçtan önce formatı değiştirebilirsin.</div>
+ ${formButtons(id?`updateMatch('${id}')`:'createMatch()')}`,!!id);
+}
+function createMatch(){
+ let t=d.teams.find(x=>x.id===$('mt').value),f=$('mf').value,total=f==='2 Set'?2:f==='3 Set'?3:5;
+ let m={id:uid('m'),teamId:t.id,teamName:t.name,opp:$('mopp').value||'Rakip',date:$('md').value,mode:$('mm').value,format:f,total,period:1,a:0,b:0,status:'Devam'};
+ d.matches.push(m);s.match=m.id;s.team=t.id;close();persist();page('matchPage');
+}
+function updateMatch(id){let m=d.matches.find(x=>x.id===id),t=d.teams.find(x=>x.id===$('mt').value);if(!m||!t)return;m.teamId=t.id;m.teamName=t.name;m.opp=$('mopp').value||'Rakip';m.date=$('md').value;m.mode=$('mm').value;m.format=$('mf').value;m.total=m.format==='2 Set'?2:m.format==='3 Set'?3:5;s.team=t.id;close();persist();page('matches')}
+function deleteMatch(id){let m=d.matches.find(x=>x.id===id);if(!m||!confirmDelete(m.teamName+' – '+m.opp))return;d.events=d.events.filter(e=>e.matchId!==id);d.matches=d.matches.filter(x=>x.id!==id);persist();page('matches')}
+function openMatch(id){s.match=id;page('matchPage')}
+const OUR_REASONS=['Ace','Hücum Sayısı','Blok Sayısı','Plase','Rakip Hatası'];
+const OPP_REASONS=['Servis Hatası','Manşet Hatası','Pas Hatası','Hücum Hatası','Blok Hatası','Savunma Hatası','Diğer'];
+function matchPage(){
+ let m=d.matches.find(x=>x.id===s.match);if(!m)return page('matches');let ev=d.events.filter(e=>e.matchId===m.id&&e.period===m.period),ps=d.players.filter(p=>p.teamId===m.teamId);
+ return `<button onclick="page('matches')">← Maçlar</button><div class="card"><div class="section" style="margin:0"><div><h2>${esc(m.teamName)} – ${esc(m.opp)}</h2><div class="muted">${esc(m.date)} • ${esc(m.mode)} • ${esc(m.format)}</div></div><div class="toolbar"><button onclick="matchForm('${m.id}')">✏️</button><button class="danger" onclick="deleteMatch('${m.id}')">🗑️</button></div></div>
+ <div class="score"><div>${m.a}<small>Biz</small></div><div>${m.b}<small>Rakip</small></div></div>
+ <div class="notice" style="text-align:center"><b>${m.period}. Set</b> • ${m.total} setlik maç</div>
+ <div class="toolbar" style="justify-content:center;margin:12px 0"><button class="primary" onclick="eventForm('${m.id}',true)">+ Biz Sayı</button><button onclick="eventForm('${m.id}',false)">+ Rakip Sayı</button><button onclick="nextSet('${m.id}')">Sonraki Set</button><button onclick="finishMatch('${m.id}')">Maçı Bitir</button></div>
+ <h3>${m.period}. Set Olayları</h3>${ev.map(e=>`<div class="event"><b>${esc(e.seq)}.</b> ${e.playerNo?'#'+esc(e.playerNo)+' ':''}${esc(e.reason)} <span class="muted">• ${esc(e.time)}</span><button style="float:right" onclick="eventForm('${m.id}',${e.ours},'${e.id}')">✏️</button><button class="danger" style="float:right" onclick="deleteEvent('${e.id}')">🗑️</button></div>`).join('')||'<div class="muted">Bu sette henüz olay yok.</div>'}</div>
+ <div class="card" style="margin-top:12px"><b>Olay mantığı</b><p class="muted">Her sayı için sayı sahibi, neden ve zaman kaydedilir. Örn: “1. Set • 17. sayı • #7 • Blok”. Rakip hatası, servis hatası, manşet hatası ve diğer hatalar ayrı tutulur.</p></div>`;
+}
+function eventForm(mid,ours,eid=''){
+ let m=d.matches.find(x=>x.id===mid),old=d.events.find(e=>e.id===eid)||{},ps=d.players.filter(p=>p.teamId===m.teamId),ops=ours?OUR_REASONS:OPP_REASONS;
+ modal(`<h2>${eid?'✏️ Olayı Düzenle':ours?'🟧 Biz Sayı':'Rakip Sayı'}</h2>
+ <div class="field"><label>Oyuncu (isteğe bağlı)</label><select id="ep"><option value="">Seçme</option>${ps.map(p=>`<option value="${esc(p.no)}" ${String(p.no)===String(old.playerNo)?'selected':''}>#${esc(p.no)} ${esc(p.name)}</option>`).join('')}</select></div>
+ <div class="field"><label>Neden / Aksiyon</label><select id="er">${ops.map(x=>`<option ${x===old.reason?'selected':''}>${x}</option>`).join('')}</select></div>
+ <div class="field"><label>Not</label><input id="enote" value="${esc(old.note||'')}" placeholder="İsteğe bağlı"></div>
+ ${formButtons(eid?`updateEvent('${eid}')`:`recordEvent('${mid}',${ours})`)}`,!!eid);
+}
+function recordEvent(mid,ours){
+ let m=d.matches.find(x=>x.id===mid),seq=d.events.filter(e=>e.matchId===mid&&e.period===m.period).length+1;
+ if(ours)m.a++;else m.b++;
+ d.events.push({id:uid('e'),matchId:mid,period:m.period,seq,playerNo:$('ep').value,reason:$('er').value,note:$('enote').value,time:new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}),ours});
+ close();persist();render();
+}
+function updateEvent(id){let e=d.events.find(x=>x.id===id);if(!e)return;e.playerNo=$('ep').value;e.reason=$('er').value;e.note=$('enote').value;close();persist();render()}
+function deleteEvent(id){let e=d.events.find(x=>x.id===id);if(!e||!confirmDelete('Bu maç olayı'))return;let m=d.matches.find(x=>x.id===e.matchId);if(m){if(e.ours)m.a=Math.max(0,m.a-1);else m.b=Math.max(0,m.b-1)}d.events=d.events.filter(x=>x.id!==id);persist();render()}
+function nextSet(id){let m=d.matches.find(x=>x.id===id);if(!m)return;if(m.period<m.total){m.period++;m.a=0;m.b=0;persist();render()}else alert('Son set. Maçı tamamlayabilirsin.')}
+function finishMatch(id){let m=d.matches.find(x=>x.id===id);if(m){m.status='Tamamlandı';persist();page('matches')}}
+
+/* ANALİZ / RAPOR / YEDEK */
+function analysis(){return `<div class="section"><h2>📊 Analiz Merkezi</h2></div><div class="stats"><div class="stat"><b>${d.players.length}</b><small>Sporcu</small></div><div class="stat"><b>${d.matches.length}</b><small>Maç</small></div><div class="stat"><b>${d.tests.length}</b><small>Test</small></div><div class="stat"><b>${d.training.length}</b><small>Antrenman</small></div></div><div class="card" style="margin-top:12px"><h3>🏐 Voleybol sürümü</h3><p>Bu sürüm yalnızca voleybola odaklıdır. Basketbol daha sonra ayrı modül olarak eklenebilir.</p></div>`}
+function reports(){return `<div class="section"><h2>📄 Veli Raporları</h2></div><div class="card"><p>Tek düğmeyle raporu açıp Safari'den PDF olarak kaydedebilirsin.</p>${d.players.map(p=>`<div class="row"><div class="grow"><b>#${esc(p.no||'-')} ${esc(p.name)}</b></div><button class="primary" onclick="playerReport('${p.id}')">📄 PDF / Yazdır</button></div>`).join('')||'<div class="muted">Önce sporcu ekle.</div>'}</div>`}
+function playerReport(id){
+ let p=d.players.find(x=>x.id===id);if(!p)return;let t=d.teams.find(x=>x.id===p.teamId),c=d.clubs.find(x=>x.id===t?.clubId),tx=d.tests.filter(x=>x.playerId===id),at=d.attendance.filter(x=>x.playerId===id),pct=at.length?Math.round(at.filter(x=>x.status==='Katıldı').length/at.length*100):0;
+ const box=document.createElement('div');box.id='printBox';box.style.cssText='position:fixed;inset:0;background:#fff;z-index:999;padding:28px;overflow:auto;font-family:Arial';
+ box.innerHTML=`<div style="max-width:800px;margin:auto"><h1 style="color:#f47b20">🏐 VolleyScout TR</h1><h2>Oyuncu Gelişim Raporu</h2><p><b>${esc(p.name)}</b> • #${esc(p.no||'-')} • ${esc(p.position||'')}</p><p>${esc(c?.name||'Spor Okulu')} • ${esc(t?.name||'Takımsız')}</p><hr><h3>Genel</h3><p>Yoklama: <b>${pct}%</b> • Test sayısı: <b>${tx.length}</b> • Boy: <b>${esc(p.height||'-')} cm</b> • Kilo: <b>${esc(p.weight||'-')} kg</b></p><h3>Testler</h3>${tx.map(x=>`<p>${esc(x.date)} — <b>${esc(x.type)}</b>: ${esc(x.result)} ${esc(x.unit||'')}</p>`).join('')||'<p>Test verisi yok.</p>'}<h3>Antrenör Notu</h3><p>${esc(p.note||'Henüz not girilmedi.')}</p><p style="margin-top:40px"><button onclick="this.closest('#printBox').remove()">Kapat</button> <button onclick="window.print()">PDF / Yazdır</button></p></div>`;
+ document.body.appendChild(box);
+}
+function settings(){return `<div class="section"><h2>⚙️ Ayarlar & Yedekleme</h2></div><div class="card"><button class="primary" onclick="backup()">⬇️ Yedek Al</button><label style="display:inline-block;background:#f7f3ef;padding:10px 13px;border-radius:12px;border:1px solid #e8d8cc;cursor:pointer">⬆️ Yedek Geri Yükle<input type="file" accept="application/json" style="display:none" onchange="restore(this.files[0])"></label><hr><button class="danger" onclick="wipe()">Tüm Verileri Sil</button></div>`}
+function backup(){let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(d,null,2)],{type:'application/json'}));a.download='VolleyScout_TR_yedek.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function restore(f){if(!f)return;let r=new FileReader();r.onload=()=>{try{let x=JSON.parse(r.result);for(const k of Object.keys(EMPTY))if(!Array.isArray(x[k]))x[k]=[];d=x;persist();location.reload()}catch(e){alert('Geçersiz yedek dosyası.')}};r.readAsText(f)}
+function wipe(){if(confirm('Tüm veriler silinsin mi? Bu işlem geri alınamaz.')){localStorage.removeItem(K);location.reload()}}
+
+render();
+setInterval(()=>{if(s.page==='home')render()},60000);
+</script>
+</body>
+</html>
