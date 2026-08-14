@@ -1,0 +1,117 @@
+
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>VolleyScout TR</title>
+<style>
+:root{--bg:#f5f6fb;--card:#fff;--text:#171a2b;--muted:#73778b;--accent:#6d5dfc;--accent2:#eeeaff;--danger:#ff5d70;--line:#e7e8ef;--shadow:0 10px 30px rgba(28,31,55,.08)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;color:var(--text)}
+button,input,select{font:inherit}
+.app{min-height:100vh;padding:env(safe-area-inset-top) 22px env(safe-area-inset-bottom);max-width:1100px;margin:auto}
+header{display:flex;align-items:center;justify-content:space-between;padding:24px 0 18px}
+.brand{font-size:25px;font-weight:800}.brand span{color:var(--accent)}
+.icon{border:0;background:var(--card);width:48px;height:48px;border-radius:16px;box-shadow:var(--shadow);font-size:22px}
+.screen{display:none}.screen.active{display:block}
+.hero{background:linear-gradient(135deg,#6d5dfc,#8b7cff);color:white;border-radius:28px;padding:28px;box-shadow:var(--shadow);margin-bottom:20px}
+.hero h1{margin:0 0 8px;font-size:32px}.hero p{margin:0;opacity:.9}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:20px;box-shadow:var(--shadow)}
+.action{border:0;text-align:left;min-height:125px;cursor:pointer}
+.action .emoji{font-size:32px;display:block;margin-bottom:16px}.action b{font-size:18px}.action small{display:block;color:var(--muted);margin-top:6px}
+h2{font-size:25px;margin:10px 0 18px}.back{border:0;background:none;color:var(--accent);font-weight:700;padding:8px 0;margin-bottom:4px}
+label{display:block;font-size:13px;color:var(--muted);font-weight:700;margin:14px 0 7px}
+input,select{width:100%;border:1px solid var(--line);background:white;border-radius:14px;padding:15px;outline:none}
+input:focus,select:focus{border-color:var(--accent)}
+.primary,.secondary,.danger{border:0;border-radius:16px;padding:15px 18px;font-weight:800;cursor:pointer}
+.primary{background:var(--accent);color:white}.secondary{background:var(--accent2);color:var(--accent)}.danger{background:#ffe9ec;color:#d83c51}
+.row{display:flex;gap:10px;align-items:center}.row>*{flex:1}
+.list{margin-top:16px;display:grid;gap:10px}.player{display:flex;align-items:center;justify-content:space-between;background:white;border:1px solid var(--line);border-radius:16px;padding:13px 15px}
+.badge{background:var(--accent2);color:var(--accent);padding:6px 10px;border-radius:10px;font-weight:800}
+.score{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:18px 0}.scorebox{background:white;border-radius:24px;padding:22px;text-align:center;border:1px solid var(--line);box-shadow:var(--shadow)}.scorebox h3{margin:0;color:var(--muted);font-size:15px}.scorebox .num{font-size:64px;font-weight:900;margin:8px}.scorebox button{width:60px;height:60px;border:0;border-radius:18px;background:var(--accent);color:#fff;font-size:30px;font-weight:800}
+.sets{display:flex;justify-content:center;gap:8px;margin:10px}.setdot{padding:8px 12px;border-radius:10px;background:white;border:1px solid var(--line);font-size:13px}
+.actions{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:16px}.statbtn{border:0;background:white;border:1px solid var(--line);border-radius:20px;padding:18px;min-height:88px;text-align:left;box-shadow:var(--shadow);cursor:pointer}.statbtn b{display:block;font-size:17px}.statbtn small{color:var(--muted)}
+.toast{position:fixed;left:50%;bottom:25px;transform:translateX(-50%) translateY(20px);background:#171a2b;color:#fff;padding:13px 18px;border-radius:14px;opacity:0;pointer-events:none;transition:.25s;z-index:5}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media(min-width:800px){.grid{grid-template-columns:repeat(4,1fr)}.actions{grid-template-columns:repeat(4,1fr)}.app{padding-left:40px;padding-right:40px}}
+</style>
+</head>
+<body>
+<div class="app">
+<header><div class="brand">🏐 Volley<span>Scout</span> TR</div><button class="icon" onclick="go('home')">⌂</button></header>
+
+<section id="home" class="screen active">
+<div class="hero"><h1>Hoş geldin, GülNur 👋</h1><p>Maçını hızlıca başlat, istatistiklerini anında kaydet.</p></div>
+<div class="grid">
+<button class="card action" onclick="go('newmatch')"><span class="emoji">🏐</span><b>Yeni Maç</b><small>Canlı istatistik başlat</small></button>
+<button class="card action" onclick="go('players')"><span class="emoji">👥</span><b>Oyuncular</b><small>Kadro oluştur ve düzenle</small></button>
+<button class="card action" onclick="toast('İlk sürümde yakında 📊')"><span class="emoji">📊</span><b>İstatistikler</b><small>Maç ve sezon analizleri</small></button>
+<button class="card action" onclick="toast('PDF raporları ikinci sürümde 📄')"><span class="emoji">📄</span><b>Raporlar</b><small>Veli performans raporları</small></button>
+</div>
+</section>
+
+<section id="players" class="screen">
+<button class="back" onclick="go('home')">← Ana Sayfa</button><h2>Oyuncular</h2>
+<div class="card">
+<div class="row"><div><label>Forma No</label><input id="pnum" type="number" min="1" max="99" placeholder="7"></div><div><label>Oyuncu Adı</label><input id="pname" placeholder="Ayşe Yılmaz"></div></div>
+<button class="primary" style="width:100%;margin-top:16px" onclick="addPlayer()">+ Oyuncu Ekle</button>
+</div>
+<div id="playerList" class="list"></div>
+</section>
+
+<section id="newmatch" class="screen">
+<button class="back" onclick="go('home')">← Ana Sayfa</button><h2>Yeni Maç</h2>
+<div class="card">
+<label>Bizim Takım</label><input id="team" value="Rüzgar Spor Kulübü">
+<label>Rakip Takım</label><input id="opponent" placeholder="Rakip takım adı">
+<label>Yaş Grubu</label><select id="age"><option>U12</option><option>U13</option><option>U14</option><option>U15</option><option>U16</option><option>Diğer</option></select>
+<label>Maç Tarihi</label><input id="date" type="date">
+<button class="primary" style="width:100%;margin-top:18px" onclick="startMatch()">Maçı Başlat →</button>
+</div>
+</section>
+
+<section id="live" class="screen">
+<button class="back" onclick="go('newmatch')">← Maç Ayarları</button>
+<h2 id="matchTitle">Canlı Maç</h2>
+<div class="sets" id="sets"><span class="setdot">Set 1</span></div>
+<div class="score">
+<div class="scorebox"><h3 id="ourName">Biz</h3><div class="num" id="ourScore">0</div><button onclick="score('our')">+</button></div>
+<div class="scorebox"><h3 id="oppName">Rakip</h3><div class="num" id="oppScore">0</div><button onclick="score('opp')">+</button></div>
+</div>
+<div class="card">
+<label>Sonraki istatistik — oyuncu seç</label>
+<select id="statPlayer"></select>
+<div class="actions">
+<button class="statbtn" onclick="stat('Servis Ace')">🎯 <b>Servis Ace</b><small>Sayı kazandıran servis</small></button>
+<button class="statbtn" onclick="stat('Servis Hatası')">⚠️ <b>Servis Hatası</b><small>Servis kaçtı</small></button>
+<button class="statbtn" onclick="stat('Hücum Sayısı')">💥 <b>Hücum Sayısı</b><small>Başarılı hücum</small></button>
+<button class="statbtn" onclick="stat('Hücum Hatası')">❌ <b>Hücum Hatası</b><small>Hücum kaynaklı hata</small></button>
+<button class="statbtn" onclick="stat('Blok')">🧱 <b>Blok</b><small>Blok sayısı</small></button>
+<button class="statbtn" onclick="stat('Savunma')">🛡️ <b>Savunma</b><small>Başarılı savunma</small></button>
+</div>
+</div>
+<div class="card" style="margin-top:16px"><b>Maç Özeti</b><div id="eventLog" class="list"></div></div>
+</section>
+</div>
+<div id="toast" class="toast"></div>
+<script>
+const state={players:JSON.parse(localStorage.getItem('vs_players')||'[]'),match:null,events:[]};
+function save(){localStorage.setItem('vs_players',JSON.stringify(state.players));}
+function go(id){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');if(id==='players')renderPlayers();}
+function toast(t){let e=document.getElementById('toast');e.textContent=t;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),1500)}
+function addPlayer(){let n=document.getElementById('pnum').value.trim(),name=document.getElementById('pname').value.trim();if(!n||!name)return toast('Forma no ve isim girin');if(state.players.some(p=>p.num==n))return toast('Bu forma numarası zaten var');state.players.push({num:n,name});save();document.getElementById('pnum').value='';document.getElementById('pname').value='';renderPlayers();toast('Oyuncu eklendi ✓')}
+function renderPlayers(){let l=document.getElementById('playerList');l.innerHTML=state.players.length?state.players.map((p,i)=>`<div class="player"><span><span class="badge">${p.num}</span> &nbsp;${p.name}</span><button class="danger" onclick="removePlayer(${i})">Sil</button></div>`).join(''):'<div class="card" style="color:var(--muted)">Henüz oyuncu eklenmedi.</div>'}
+function removePlayer(i){state.players.splice(i,1);save();renderPlayers()}
+function startMatch(){let opp=document.getElementById('opponent').value.trim();if(!opp)return toast('Rakip takım adını girin');if(!state.players.length)return toast('Önce en az bir oyuncu ekleyin');state.match={team:document.getElementById('team').value,opp,our:0,oppScore:0};state.events=[];document.getElementById('ourName').textContent=state.match.team;document.getElementById('oppName').textContent=opp;document.getElementById('matchTitle').textContent=state.match.team+' vs '+opp;let s=document.getElementById('statPlayer');s.innerHTML=state.players.map(p=>`<option value="${p.num}">#${p.num} ${p.name}</option>`).join('');updateScore();renderLog();go('live')}
+function score(side){if(!state.match)return;side==='our'?state.match.our++:state.match.oppScore++;updateScore();toast(side==='our'?'Biz +1':'Rakip +1')}
+function updateScore(){document.getElementById('ourScore').textContent=state.match.our;document.getElementById('oppScore').textContent=state.match.oppScore}
+function stat(type){let sel=document.getElementById('statPlayer'),p=state.players.find(x=>x.num==sel.value);state.events.unshift({type,player:p});renderLog();toast('#'+p.num+' '+type+' ✓')}
+function renderLog(){let l=document.getElementById('eventLog');l.innerHTML=state.events.slice(0,8).map(e=>`<div class="player"><span>#${e.player.num} ${e.player.name}</span><b>${e.type}</b></div>`).join('')||'<div style="color:var(--muted)">Henüz istatistik girilmedi.</div>'}
+document.getElementById('date').valueAsDate=new Date();
+renderPlayers();
+</script>
+</body>
+</html>
