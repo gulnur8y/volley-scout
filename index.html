@@ -90,7 +90,9 @@ function loadData(){
  let raw=null;try{raw=localStorage.getItem(KEY)}catch(e){}
  let saved=null;try{saved=raw?JSON.parse(raw):null}catch(e){saved=null}
  const x=Object.assign({},DEFAULT_DATA,saved||{});
- for(const k of ['players','teams','coaches','schoolGroups','schoolAttendance','attendance','trainings','matches','tests','tactics','messages','notifications']) if(!Array.isArray(x[k])) x[k]=[];
+ for(const k of ['players','teams','coaches','schoolGroups','schoolAttendance','attendance','trainings','matches','tests','tactics','messages','notifications']) { if(!Array.isArray(x[k])) x[k]=[]; else x[k]=x[k].filter(v=>v!==null&&v!==undefined&&typeof v==='object'); }
+ if(!Array.isArray(x.leagues))x.leagues=[];
+ if(x.leagues.length && x.leagues.some(v=>typeof v!=='object')) x.leagues=x.leagues.map(v=>typeof v==='string'?{id:uid('lg'),name:v}:v).filter(Boolean);
  if(!Array.isArray(x.leagues)||!x.leagues.length)x.leagues=LEAGUES_DEFAULT.slice();
  x.season=x.season||'2026-2027';
  x.players.forEach(p=>{if(!Array.isArray(p.teamIds))p.teamIds=p.teamId?[p.teamId]:[];p.teamId=p.teamIds[0]||'';});
@@ -111,15 +113,15 @@ function toast(x){$('toast').textContent=x;$('toast').classList.add('show');setT
 function playerTeamIds(p){return Array.isArray(p.teamIds)?p.teamIds:(p.teamId?[p.teamId]:[])}
 function playerTeams(p){return playerTeamIds(p).map(id=>d.teams.find(t=>t.id===id)).filter(Boolean)}
 function teamPlayers(id){return d.players.filter(p=>playerTeamIds(p).includes(id))}
-function finishSetup(){let club=$('setupClub').value.trim(),coach=$('setupCoach').value.trim();if(!club||!coach)return toast('Kulüp ve antrenör adını gir.');d.club=club;d.coach=coach;d.season=$('setupSeason').value||'2026-2027';save();boot()}
+function finishSet(id){let m=d.matches.find(x=>x.id===id);if(!m)return;normalizeMatchPoints(m);let max=Number(m.sets)||3;if((m.currentSet||1)>=max)return toast('Seçilen tüm setler tamamlandı.');m.currentSet=(m.currentSet||1)+1;save();liveMatch(id);toast((m.currentSet-1)+'. set tamamlandı. '+m.currentSet+'. sete geçildi.')}
+function finishSetup(){let coach=$('setupCoach')?.value.trim()||'',club=$('setupClub')?.value.trim()||'';if(!coach||!club)return toast('Antrenör adı ve kulüp adı gerekli.');d.club=club;d.coach=coach;d.season=$('setupSeason')?.value.trim()||'2026-2027';save();boot();toast('VolleyScout hazır.')}
 function boot(){if(!d.club){$('setup').classList.remove('hidden');$('app').classList.add('hidden');return}$('setup').classList.add('hidden');$('app').classList.remove('hidden');$('brand').textContent=d.club;$('subbrand').textContent=d.coach+' • '+d.season;renderNav();renderAll();showView(state.view||'home')}
-function showView(v,fromBack=false){let old=state.view||'home';if(!fromBack&&old!==v)state.prevView=old;state.view=v;document.querySelectorAll('.view').forEach(x=>x.classList.add('hidden'));$(v)?.classList.remove('hidden');document.querySelectorAll('[data-v]').forEach(x=>x.classList.toggle('active',x.dataset.v===v));$('backBtn')?.classList.toggle('hidden',v==='home');render(v);toggleMenu(false);}
-
+function showView(v){if(!$(v))return;let prev=state.view;state.view=v;state.prevView=prev;document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));$(v).classList.add('active');document.querySelectorAll('.nav button,.drawerNav button').forEach(b=>b.classList.toggle('active',b.dataset.v===v));$('backBtn').classList.toggle('hidden',v==='home');render(v);if($('drawer').classList.contains('show'))toggleMenu()}
 function goBack(){showView(state.prevView&&state.prevView!==state.view?state.prevView:'home')}
 function toggleMenu(){$('drawer').classList.toggle('show')}
 function renderNav(){let items=[['home','🏠','Ana'],['coaches','🧑‍🏫','Antrenörler'],['teams','🏐','Takımlar'],['athletes','👥','Sporcular'],['school','🏫','Spor Okulu'],['attendance','📝','Yoklama'],['training','🏋️','Antrenman'],['matches','🏐','Maçlar'],['tests','🧪','Testler'],['tactics','🧠','Taktik'],['messages','💬','İletişim'],['reports','📊','Raporlar'],['notifications','🔔','Bildirimler'],['club','⚙️','Ayarlar']];let make=x=>`<button data-v="${x[0]}" onclick="showView('${x[0]}')">${x[1]}<br>${x[2]}</button>`;$('nav').innerHTML=items.map(make).join('');$('drawerNav').innerHTML=items.map(x=>`<button data-v="${x[0]}" onclick="showView('${x[0]}')">${x[1]} ${x[2]}</button>`).join('')}
 function renderAll(){['home','athletes','teams','coaches','school','attendance','training','matches','tests','tactics','messages','reports','club','notifications'].forEach(render);$('notifCount').textContent=d.notifications.filter(n=>!n.read).length}
-function render(v){if(!$(`${v}`))return;({home:home,athletes:athletes,teams:teams,coaches:coaches,school:school,attendance:attendance,training:training,matches:matches,tests:tests,tactics:tactics,messages:messages,reports:reports,club:club,notifications:notifications}[v])()}
+function render(v){if(!$(`${v}`))return;let fn=({home:home,athletes:athletes,teams:teams,coaches:coaches,school:school,attendance:attendance,training:training,matches:matches,tests:tests,tactics:tactics,messages:messages,reports:reports,club:club,notifications:notifications}[v]);if(typeof fn!=='function')return;try{fn()}catch(e){console.error('VolleyScout bölüm hatası:',v,e);$(v).innerHTML=`<div class="card"><h2>⚠️ ${esc(v)} bölümü açılırken bir sorun oluştu.</h2><p class="muted">Veriler korunuyor. Bölüm güvenli modda açılmayı denedi.</p><button class="btn primary" onclick="location.reload()">🔄 Yenile</button></div>`}}
 function greeting(){let h=new Date().getHours();return h<6?'İyi geceler':h<12?'Günaydın':h<18?'İyi çalışmalar':'İyi akşamlar'}
 function home(){let today=new Date().toISOString().slice(0,10),trs=d.trainings.filter(t=>t.date===today),up=d.matches.filter(m=>m.date>=today).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,2),pending=d.notifications.filter(n=>!n.read).length;$('home').innerHTML=`<div class="hero"><h2>${greeting()} ${esc(d.coach)} 👋</h2><div class="muted">${esc(d.club)} • ${esc(d.season)}</div><div class="grid" style="margin-top:14px"><div><div class="stat">${d.players.length}</div><div class="muted">Sporcu</div></div><div><div class="stat">${d.teams.length}</div><div class="muted">Takım</div></div><div><div class="stat">${d.trainings.length}</div><div class="muted">Antrenman</div></div><div><div class="stat">${pending}</div><div class="muted">Okunmamış</div></div></div></div>
 <div class="section-title"><h2>⚡ Hızlı İşlemler</h2><span class="muted">Diğer tüm bölümler ☰ menüde</span></div>
@@ -169,7 +171,7 @@ function saveSchool(id){
  g.name=$('sg_name').value.trim()||'Spor Okulu Grubu';g.days=selected;g.day=selected[0]||'';g.time=time;
  if(!id)d.schoolGroups.push(g);save();closeModal();renderAll();toast('Spor okulu grubu kaydedildi.')
 }
-function school(){$('school').innerHTML=`<div class="section-title"><h2>🏫 Spor Okulu</h2><div class="spacer"></div><button class="btn primary" onclick="openModal('Yeni Spor Okulu Grubu',schoolForm())">➕ Grup Ekle</button></div><p class="muted">Takımlardan bağımsız sporcu, yoklama ve test takibi.</p><div class="grid">${d.schoolGroups.map(g=>`<div class="card"><h3>${esc(g.name)}</h3><div class="muted">${esc((g.days||[g.day]).join(', '))} • ${esc(g.time||'')}</div><div class="stat">${d.players.filter(p=>p.schoolGroupId===g.id).length}</div><div class="muted">sporcu</div><br><div class="actions"><button class="btn" onclick="schoolDetail('${g.id}')">👥 Aç</button><button class="btn" onclick="openModal('Grup Düzenle',schoolForm(d.schoolGroups.find(x=>x.id==='${g.id}')))">✏️</button><button class="btn danger" onclick="deleteSchool('${g.id}')">🗑️</button></div></div>`).join('')||'<div class="card muted">Henüz spor okulu grubu yok.</div>'}</div>`}
+function school(){let groups=d.schoolGroups; $('school').innerHTML=`<div class="section-title"><h2>🏫 Spor Okulu</h2><div class="spacer"></div><button class="btn primary" onclick="openModal('Yeni Spor Okulu Grubu',schoolForm())">➕ Grup Ekle</button></div><p class="muted">Takımlardan bağımsız sporcu, <b>grup yoklaması</b> ve test takibi.</p><div class="card" style="margin-bottom:14px;border:2px solid #fdba74;background:#fff7ed"><div class="row"><div style="font-size:26px">📝</div><div style="flex:1"><b>Spor Okulu Yoklaması</b><div class="muted">Grup seç → o gruptaki tüm sporcuları tek listede gör → gün gün yoklama al.</div></div></div>${groups.length?`<div class="actions" style="margin-top:12px">${groups.map(g=>`<button class="btn primary" onclick="schoolAttendance('${g.id}')">📝 ${esc(g.name)} Yoklaması</button>`).join('')}</div>`:'<div class="muted" style="margin-top:10px">Önce bir Spor Okulu grubu oluştur.</div>'}</div><div class="grid">${groups.map(g=>`<div class="card"><h3>${esc(g.name)}</h3><div class="muted">${esc((g.days||[g.day]).join(', '))} • ⏰ ${esc(g.time||'')}</div><div class="stat">${d.players.filter(p=>p.schoolGroupId===g.id).length}</div><div class="muted">sporcu</div><br><div class="actions"><button class="btn primary" onclick="schoolAttendance('${g.id}')">📝 Yoklama</button><button class="btn" onclick="schoolDetail('${g.id}')">👥 Sporcular</button><button class="btn" onclick="openModal('Grup Düzenle',schoolForm(d.schoolGroups.find(x=>x.id==='${g.id}')))">✏️</button><button class="btn danger" onclick="deleteSchool('${g.id}')">🗑️</button></div></div>`).join('')||'<div class="card muted">Henüz spor okulu grubu yok.</div>'}</div>`}
 function schoolDetail(id){let g=d.schoolGroups.find(x=>x.id===id),ps=d.players.filter(p=>p.schoolGroupId===id);openModal('🏫 '+esc(g.name),`<div class="row"><span class="badge">${esc((g.days||[g.day]).join(', '))}</span><span class="badge">⏰ ${esc(g.time||'')}</span></div><div class="actions" style="margin:12px 0"><button class="btn primary" onclick="schoolAttendance('${id}')">📝 Grup Yoklaması</button></div><h3>Sporcular</h3><div class="list">${ps.map(p=>`<div class="item row"><div class="avatar">${esc((p.name||'?')[0])}</div><b>${esc(p.name)}</b><div class="spacer"></div><button class="btn" onclick="profile('${p.id}')">Profil</button></div>`).join('')||'<div class="muted">Sporcu yok.</div>'}</div>`)}
 function schoolAttendanceDates(month,g){let y=Number(month.slice(0,4)),m=Number(month.slice(5,7)),daysInMonth=new Date(y,m,0).getDate(),allowed=Array.isArray(g.days)&&g.days.length?g.days:(g.day?[g.day]:DAYS);return Array.from({length:daysInMonth},(_,i)=>{let date=new Date(y,m-1,i+1),day=DAYS[(date.getDay()+6)%7];return allowed.includes(day)?{date:`${month}-${String(i+1).padStart(2,'0')}`,day}:null}).filter(Boolean)}
 function schoolAttendance(groupId){let g=d.schoolGroups.find(x=>x.id===groupId);if(!g)return;let month=state.schoolMonth||new Date().toISOString().slice(0,7),ps=d.players.filter(p=>p.schoolGroupId===groupId),dates=schoolAttendanceDates(month,g);openModal('📝 '+esc(g.name)+' • Yoklama',`<div class="formgrid"><div class="field"><label>Ay</label><input type="month" value="${month}" onchange="state.schoolMonth=this.value;schoolAttendance('${groupId}')"></div><div class="field"><label>⏰ Grup saati</label><input type="time" value="${esc(g.time||'')}" disabled></div></div><div class="muted" style="margin:10px 0">${dates.length} antrenman günü • ${ps.length} sporcu</div>${dates.map(dt=>{return `<div class="card" style="margin-bottom:12px"><div class="section-title"><h3>📅 ${dt.date.split('-').reverse().join('.')} • ${dt.day}</h3><div class="muted">⏰ ${esc(g.time||'')}</div></div><div class="actions" style="margin-bottom:10px"><button class="btn" onclick="bulkSchoolAttendance('${groupId}','${dt.date}','G')">🟢 Tümünü Geldi</button><button class="btn" onclick="bulkSchoolAttendance('${groupId}','${dt.date}','Y')">🔴 Tümünü Gelmedi</button></div>${ps.map(p=>{let a=d.schoolAttendance.find(x=>x.groupId===groupId&&x.playerId===p.id&&x.date===dt.date),v=a?.status||'';return `<div class="item row"><div style="flex:1"><b>${esc(p.name)}</b>${p.no?`<div class="muted">#${esc(p.no)}</div>`:''}</div><div class="actions"><button class="btn ${v==='G'?'primary':''}" onclick="setSchoolAttendance('${groupId}','${p.id}','${dt.date}','G')">✅</button><button class="btn ${v==='Y'?'danger':''}" onclick="setSchoolAttendance('${groupId}','${p.id}','${dt.date}','Y')">❌</button><button class="btn ${v==='GEC'?'primary':''}" onclick="setSchoolAttendance('${groupId}','${p.id}','${dt.date}','GEC')">🟡</button><button class="btn ${v==='I'?'primary':''}" onclick="setSchoolAttendance('${groupId}','${p.id}','${dt.date}','I')">🔵</button></div></div>`}).join('')||'<div class="muted">Bu grupta sporcu yok.</div>'}</div>`}).join('')||'<div class="card muted">Bu ay için seçili gün yok.</div>'}`)}
@@ -189,74 +191,176 @@ function autoTrainingTime(){let t=d.teams.find(x=>x.id===$('tr_team').value);if(
 function saveTraining(id){let t=id?d.trainings.find(x=>x.id===id):{id:uid('tr')};t.date=$('tr_date').value;t.time=$('tr_time').value;t.teamId=$('tr_team').value;t.team=d.teams.find(x=>x.id===t.teamId)?.name||$('tr_team').value;t.venue=$('tr_venue').value;t.title=$('tr_title').value;t.skills=[...document.querySelectorAll('.tr_skill:checked')].map(x=>x.value);t.note=$('tr_note').value;t.notify=$('tr_notify').checked;if(!id)d.trainings.push(t);if(t.notify)addNotification('🏋️ Yeni antrenman programı',`${t.date} ${t.time||''} • ${t.team||''} • ${t.title}`);save();closeModal();renderAll();toast('Antrenman kaydedildi.')}
 function training(){let week=state.week||new Date().toISOString().slice(0,10),list=[...d.trainings].sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));$('training').innerHTML=`<div class="section-title"><h2>🏋️ Antrenman</h2><div class="spacer"></div><button class="btn primary" onclick="openModal('Yeni Antrenman',trainingForm({date:new Date().toISOString().slice(0,10)}))">➕ Antrenman Ekle</button></div><div class="card"><b>Haftalık program</b><p class="muted">Her antrenmanda kısa içerik + not + isteğe bağlı bildirim.</p></div><div class="list">${list.map(t=>`<div class="item"><div class="row between"><div><b>${esc(t.date)} • ${esc(t.time? t.time+' – '+String((Number(t.time.slice(0,2))+1)%24).padStart(2,'0')+':'+t.time.slice(3):'')} — ${esc(t.team)}</b><div>${esc(t.title)} • ${esc(t.venue||'')}</div>${Array.isArray(t.skills)&&t.skills.length?`<div class="muted">🏐 ${t.skills.map(esc).join(' • ')}</div>`:''}${t.note?`<div class="muted">📝 ${esc(t.note)}</div>`:''}</div><div class="actions"><button class="btn" onclick="openModal('Antrenman Düzenle',trainingForm(d.trainings.find(x=>x.id==='${t.id}')))">✏️</button><button class="btn danger" onclick="deleteTraining('${t.id}')">🗑️</button></div></div></div>`).join('')||'<div class="card muted">Henüz antrenman programı yok.</div>'}</div>`}
 function deleteTraining(id){if(!confirm('Antrenman silinsin mi?'))return;d.trainings=d.trainings.filter(x=>x.id!==id);save();renderAll();toast('Antrenman silindi.')}
-function normalizeMatchPoints(m){if(!Array.isArray(m.points))m.points=[];m.points.forEach(p=>{if(!p.set)p.set=1;if(!p.reason)p.reason='Diğer';if(!p.result)p.result=p.side==='biz'?'point':'point';});}
-function playerMatchStats(m){normalizeMatchPoints(m);let rows=[];[...new Set(m.points.map(p=>p.playerId).filter(Boolean))].forEach(pid=>{let ps=m.points.filter(p=>p.playerId===pid),pl=d.players.find(x=>x.id===pid),points=ps.filter(p=>p.result==='point').length,errors=ps.filter(p=>p.result==='error').length,forced=ps.filter(p=>p.result==='forced_error').length,total=ps.length,contribution=total?Math.round((points+forced)/total*100):0,reasons={};ps.forEach(p=>reasons[p.reason||'Diğer']=(reasons[p.reason||'Diğer']||0)+1);rows.push({name:pl?.name||'Bilinmeyen',points,errors,forced,contribution,reasons});});return rows;}
-function printMatchReport(id){let m=d.matches.find(x=>x.id===id);if(!m)return;let rows=playerMatchStats(m),w=window.open('','_blank');if(!w)return;w.document.write('<html><head><meta charset="utf-8"><title>VolleyScout Maç Raporu</title></head><body><h1>VolleyScout Maç Raporu</h1><table border="1" cellpadding="6"><tr><th>Sporcu</th><th>Aldığı sayı</th><th>Yaptığı hata</th><th>Rakibe aldırdığı hata</th><th>Katkı %</th><th>Teknik</th></tr>'+rows.map(r=>'<tr><td>'+esc(r.name)+'</td><td>'+r.points+'</td><td>'+r.errors+'</td><td>'+r.forced+'</td><td>'+r.contribution+'%</td><td>'+Object.entries(r.reasons).map(([k,v])=>esc(k)+': '+v).join(' • ')+'</td></tr>').join('')+'</table></body></html>');w.document.close();setTimeout(()=>w.print(),300);}
-
-const MATCH_SET_OPTIONS='<option value="2">2 Set</option><option value="3">3 Set</option><option value="5">5 Set</option>';
-function matchForm(m={}){return `<div class="formgrid"><div class="field"><label>Takım</label><select id="m_team">${d.teams.map(t=>`<option value="${t.id}" ${t.id===m.teamId?'selected':''}>${esc(t.name)}</option>`).join('')}</select></div><div class="field"><label>Rakip</label><input id="m_opp" value="${esc(m.opponent)}"></div><div class="field"><label>Tarih</label><input type="date" id="m_date" value="${esc(m.date)}"></div><div class="field"><label>Saat</label><input type="time" id="m_time" value="${esc(m.time)}"></div><div class="field"><label>Salon</label><input id="m_venue" value="${esc(m.venue)}"></div><div class="field"><label>Set sistemi</label><select id="m_sets">${[3,5].map(x=>`<option ${x===(m.sets||5)?'selected':''}>${x}</option>`).join('')}</select></div></div><br><button class="btn primary" onclick="saveMatch('${m.id||''}')">💾 Kaydet</button>`}
-function saveMatch(id){let m=id?d.matches.find(x=>x.id===id):{id:uid('m'),points:[]};m.teamId=$('m_team').value;m.team=d.teams.find(t=>t.id===m.teamId)?.name||'';m.opponent=$('m_opp').value;m.date=$('m_date').value;m.time=$('m_time').value;m.venue=$('m_venue').value;m.sets=Number($('m_sets').value);if(!id)d.matches.push(m);save();closeModal();renderAll();toast('Maç kaydedildi.')}
-function matches(){let list=[...d.matches].sort((a,b)=>a.date.localeCompare(b.date));$('matches').innerHTML=`<div class="section-title"><h2>🏐 Maçlar</h2><div class="spacer"></div><button class="btn primary" onclick="openModal('Yeni Maç',matchForm({date:new Date().toISOString().slice(0,10)}))">➕ Maç Oluştur</button></div><div class="list">${list.map(m=>{let bs=m.points.filter(p=>p.side==='biz').length,rs=m.points.filter(p=>p.side==='rakip').length;return `<div class="item"><div class="row between"><div><h3>${esc(m.team)} 🆚 ${esc(m.opponent)}</h3><div class="muted">${m.date} ${m.time||''} • ${esc(m.venue||'')} • ${m.sets} set</div><div class="score">${bs} - ${rs}</div></div><div class="actions"><button class="btn primary" onclick="liveMatch('${m.id}')">⚡ Hızlı</button><button class="btn" onclick="matchAnalysis('${m.id}')">📊 Analiz</button><button class="btn" onclick="openModal('Maç Düzenle',matchForm(d.matches.find(x=>x.id==='${m.id}')))">✏️</button><button class="btn danger" onclick="deleteMatch('${m.id}')">🗑️</button></div></div></div>`}).join('')||'<div class="card muted">Henüz maç yok.</div>'}</div>`}
-function deleteMatch(id){if(!confirm('Maç silinsin mi?'))return;d.matches=d.matches.filter(x=>x.id!==id);save();renderAll();toast('Maç silindi.')}
-function liveMatch(id){
-let m=d.matches.find(x=>x.id===id);if(!m)return;
-normalizeMatchPoints(m);if(!m.currentSet)m.currentSet=1;
-let players=teamPlayers(m.teamId),cur=Number(m.currentSet||1);
-let b=m.points.filter(p=>(p.set||1)===cur&&p.side==='biz').length;
-let r=m.points.filter(p=>(p.set||1)===cur&&p.side==='rakip').length;
-let reasons=['Servis','Manşet','Pas','Smaç','Plase','Hücum','Blok','Defans','Savunma','File Teması','Diğer'];
-let recent=m.points.slice(-6).reverse();
-openModal('🏐 '+esc(m.team||'Takım')+'  —  '+esc(m.opponent||'Rakip'),`
-<style>
-.ms-wrap{font-family:inherit}.ms-score{display:flex;align-items:center;justify-content:center;gap:18px;margin:8px 0 18px}.ms-score .num{font-size:42px;font-weight:800;line-height:1}.ms-score .dash{font-size:26px;opacity:.5}.ms-set{text-align:center;font-weight:700;margin-bottom:14px}.ms-row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.ms-row>*{flex:1;min-width:120px}.ms-label{font-size:12px;font-weight:700;opacity:.7;margin-bottom:5px}.ms-main{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}.ms-main button{min-height:58px;font-size:17px;font-weight:800}.ms-plus{border-radius:14px;padding:14px;border:0;cursor:pointer}.ms-biz{background:#ff8a00;color:#fff}.ms-rak{background:#eee;color:#222}.ms-detail{margin-top:12px;padding:10px;border-radius:12px;background:rgba(127,127,127,.08)}.ms-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.ms-actions button{flex:1;min-width:130px}
-</style>
-<div class="ms-wrap">
-<div class="ms-score"><span class="num">${b}</span><span class="dash">–</span><span class="num">${r}</span></div>
-<div class="ms-set">${cur}. SET &nbsp; • &nbsp; ${m.finished?'MAÇ BİTTİ':'CANLI'}</div>
-
-<div class="ms-row">
-<div><div class="ms-label">SPORCU</div><select id="q_player"><option value="">Sporcu seç</option>${players.map(p=>`<option value="${p.id}">${esc(p.name)}${p.no?' #'+esc(p.no):''}</option>`).join('')}</select></div>
-<div><div class="ms-label">OLAY</div><select id="q_result"><option value="point">🏆 Sayı</option><option value="error">❌ Hata</option><option value="forced_error">🎯 Rakibe hata</option></select></div>
-</div>
-
-<div class="ms-label">NEDEN / BECERİ</div>
-<select id="q_reason" style="width:100%">${reasons.map(x=>`<option value="${x}">${x}</option>`).join('')}</select>
-
-<div class="ms-main">
-<button class="ms-plus ms-biz" onclick="quickPoint('${id}','biz')">+1 BİZ</button>
-<button class="ms-plus ms-rak" onclick="quickPoint('${id}','rakip')">+1 RAKİP</button>
-</div>
-
-<div class="ms-actions">
-<button class="btn primary" onclick="finishSet('${id}','biz')">🏆 Seti Biz Kazandı</button>
-<button class="btn" onclick="finishSet('${id}','rakip')">Seti Rakip Kazandı</button>
-<button class="btn danger" onclick="finishMatch('${id}')">🏁 Maçı Bitir</button>
-</div>
-
-<div class="ms-detail">
-<b>Son kayıtlar</b>
-${recent.map(pointRow).join('')||'<div class="muted">Henüz kayıt yok.</div>'}
-</div>
-
-<div class="ms-actions">
-<button class="btn" onclick="matchAnalysis('${id}')">📊 Detaylı Analiz</button>
-<button class="btn" onclick="printMatchReport('${id}')">📄 PDF</button>
-<button class="btn" onclick="closeModal()">Kapat</button>
-</div>
-</div>`);
+function refreshMatchTeams(){
+ let internal=$('m_internal')?.value==='1',wrap=$('m_opponent_wrap');if(!wrap)return;
+ if(internal){
+  wrap.innerHTML='<label>Takım B</label><select id="m_team2">'+d.teams.map(t=>`<option value="${t.id}">${esc(t.name)}</option>`).join('')+'</select>';
+ }else{
+  wrap.innerHTML='<label>Rakip</label><input id="m_opp" placeholder="Rakip takım adı">';
+ }
 }
-
-
-function selectReason(btn,r){document.querySelectorAll('#reasonGrid .reason-btn').forEach(x=>x.classList.remove('active'));btn.classList.add('active');$('q_reason').value=r}
-function quickPoint(id,side){let m=d.matches.find(x=>x.id===id);if(!m)return;normalizeMatchPoints(m);let player=$('q_player')?.value||'';let reason=$('q_reason')?.value||'Diğer';let result=$('q_result')?.value||'point';if(side==='biz'&&!player)return toast('Sporcu seç.');m.points.push({id:uid('pt'),side:side,playerId:side==='biz'?player:'',reason:reason,result:result,kind:result,set:m.currentSet||1,time:new Date().toLocaleTimeString('tr-TR')});save();liveMatch(id);}
-
-function finishSet(id,winner){let m=d.matches.find(x=>x.id===id);if(!m)return;normalizeMatchPoints(m);let s=Number(m.currentSet||1),max=Number(m.sets)||3;m.setResults=Array.isArray(m.setResults)?m.setResults:[];if(m.setResults.some(x=>Number(x.set)===s))return toast('Set zaten tamamlandı.');let sc=m.points.filter(p=>(p.set||1)===s&&p.side==='biz').length,sr=m.points.filter(p=>(p.set||1)===s&&p.side==='rakip').length;m.setResults.push({set:s,biz:sc,rakip:sr,winner:winner});let target=max===5?3:2,wb=m.setResults.filter(x=>x.winner==='biz').length,wr=m.setResults.filter(x=>x.winner==='rakip').length;if(wb>=target||wr>=target||s>=max){m.finished=true;m.winner=wb>wr?'biz':wr>wb?'rakip':'';m.finishedAt=new Date().toISOString();}else m.currentSet=s+1;save();renderAll();if(!m.finished)liveMatch(id);toast(m.finished?'Maç tamamlandı.':'Set tamamlandı.');}
-
-function pointRow(p){let name=p.playerId?(d.players.find(x=>x.id===p.playerId)?.name||''):'Takım';return `<div class="item"><b>${p.side==='biz'?'🟧 BİZ':'🔵 RAKİP'}</b> • ${esc(name)} • ${esc(p.reason)}<div class="muted">${p.time}</div></div>`}
-function addPoint(id){let m=d.matches.find(x=>x.id===id);m.points.push({id:uid('pt'),side:$('pt_side').value,playerId:$('pt_player').value,reason:$('pt_reason').value,time:new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'})});save();liveMatch(id);toast('Sayı kaydedildi.')}
-function finishMatch(id){let m=d.matches.find(x=>x.id===id);if(!m)return;normalizeMatchPoints(m);m.finished=true;m.finishedAt=new Date().toISOString();let wb=(m.setResults||[]).filter(x=>x.winner==='biz').length,wr=(m.setResults||[]).filter(x=>x.winner==='rakip').length;m.winner=wb>wr?'biz':wr>wb?'rakip':'';save();renderAll();toast('Maç tamamlandı ve raporlara kaydedildi.');}
-function matchAnalysis(id){let m=d.matches.find(x=>x.id===id);if(!m)return;let rows=playerMatchStats(m);openModal('📊 Oyuncu Bazlı Maç Analizi',`<div class="list">${rows.map(r=>`<div class="card"><h3>${esc(r.name)}</h3><div class="analysis-grid"><div class="mini-stat"><b>${r.points}</b><div>Aldığı sayı</div></div><div class="mini-stat"><b>${r.errors}</b><div>Yaptığı hata</div></div><div class="mini-stat"><b>${r.forced}</b><div>Rakibe aldırdığı hata</div></div><div class="mini-stat"><b>${r.contribution}%</b><div>Katkı %</div></div></div><p><b>Teknik:</b> ${Object.entries(r.reasons).map(([k,v])=>esc(k)+': '+v).join(' • ')}</p></div>`).join('')||'<div class="card muted">Oyuncu olayı yok.</div>'}<br><button class="btn primary" onclick="printMatchReport('${id}')">📄 PDF / Yazdır</button>`);}
-
+function matchForm(m={}){
+ let internal=!!m.internal;
+ let maxSets=Number(m.sets)||3;
+ return `<div class="formgrid">
+ <div class="field"><label>Maç Türü</label><select id="m_internal" onchange="refreshMatchTeams()"><option value="0" ${!internal?'selected':''}>🌐 Dış Rakip</option><option value="1" ${internal?'selected':''}>🏠 Kulüp İçi Maç</option></select></div>
+ <div class="field"><label>Set Sistemi</label><select id="m_sets">${[2,3,5].map(x=>`<option value="${x}" ${x===maxSets?'selected':''}>${x} Set</option>`).join('')}</select></div>
+ <div class="field"><label>Takım A</label><select id="m_team">${d.teams.map(t=>`<option value="${t.id}" ${t.id===m.teamId?'selected':''}>${esc(t.name)}</option>`).join('')}</select></div>
+ <div class="field" id="m_opponent_wrap"><label>${internal?'Takım B':'Rakip'}</label>${internal?`<select id="m_team2">${d.teams.map(t=>`<option value="${t.id}" ${t.id===m.team2Id?'selected':''}>${esc(t.name)}</option>`).join('')}</select>`:`<input id="m_opp" value="${esc(m.opponent||'')}" placeholder="Rakip takım adı">`}</div>
+ <div class="field"><label>Tarih</label><input type="date" id="m_date" value="${esc(m.date)}"></div>
+ <div class="field"><label>Saat</label><input type="time" id="m_time" value="${esc(m.time)}"></div>
+ <div class="field"><label>Salon</label><input id="m_venue" value="${esc(m.venue)}"></div>
+ </div>
+ <br><div class="card muted">💡 Kulüp içi maçta iki takımın sporcuları aynı maç içinde ayrı ayrı analiz edilir. 2 / 3 / 5 set seçilebilir.</div>
+ <br><button class="btn primary" onclick="saveMatch('${m.id||''}')">💾 Kaydet</button>`;
+}
+function saveMatch(id){
+ let m=id?d.matches.find(x=>x.id===id):{id:uid('m'),points:[]};
+ let internal=$('m_internal').value==='1';
+ m.internal=internal;m.teamId=$('m_team').value;m.team=d.teams.find(x=>x.id===m.teamId)?.name||'';
+ m.team2Id=internal?($('m_team2')?.value||''):'';
+ m.team2=internal?(d.teams.find(x=>x.id===m.team2Id)?.name||''):'';
+ m.opponent=internal?m.team2:($('m_opp')?.value.trim()||'Rakip');
+ m.date=$('m_date').value;m.time=$('m_time').value;m.venue=$('m_venue').value;m.sets=Number($('m_sets').value)||3;
+ if(!m.teamId)return toast('Takım A seç.');if(internal&&m.teamId===m.team2Id)return toast('İki farklı takım seç.');if(!internal&&!m.opponent)return toast('Rakip adı gir.');
+ if(!id)d.matches.push(m);normalizeMatchPoints(m);save();closeModal();renderAll();toast('Maç kaydedildi.');
+}
+function matches(){
+ let list=[...d.matches].sort((a,b)=>a.date.localeCompare(b.date));
+ $('matches').innerHTML=`<div class="section-title"><h2>🏐 Maçlar</h2><div class="spacer"></div><button class="btn primary" onclick="openModal('Yeni Maç',matchForm({date:new Date().toISOString().slice(0,10),sets:3}))">➕ Maç Oluştur</button></div>
+ <div class="list">${list.map(m=>{normalizeMatchPoints(m);let s=matchTotalScore(m),label=m.internal?`${esc(m.team)} 🆚 ${esc(m.team2)}`:`${esc(m.team)} 🆚 ${esc(m.opponent)}`;return `<div class="item"><div class="row between"><div><h3>${m.internal?'🏠 ':''}${label}</h3><div class="muted">${esc(m.date)} ${esc(m.time||'')} • ${esc(m.venue||'')} • ${m.sets} set</div><div class="score">${s[0]} - ${s[1]}</div></div><div class="actions"><button class="btn primary" onclick="liveMatch('${m.id}')">⚡ Hızlı</button><button class="btn" onclick="matchAnalysis('${m.id}')">📊 Analiz</button><button class="btn" onclick="matchTeamReport('${m.id}')">📄 Maç PDF</button><button class="btn" onclick="openModal('Maç Düzenle',matchForm(d.matches.find(x=>x.id==='${m.id}')))">✏️</button><button class="btn danger" onclick="deleteMatch('${m.id}')">🗑️</button></div></div></div>`}).join('')||'<div class="card muted">Henüz maç yok.</div>'}</div>`;
+}
+function deleteMatch(id){if(!confirm('Maç silinsin mi?'))return;d.matches=d.matches.filter(x=>x.id!==id);save();renderAll();toast('Maç silindi.')}
+function eventPointWinner(e){return ['a_score','a_forced','b_error'].includes(e)?'a':'b'}
+function eventLabel(e,m){let a=m?.team||'Takım A',b=m?.internal?(m.team2||'Takım B'):(m.opponent||'Rakip');return ({a_score:'🟧 '+a+' Sayı',a_error:'🔴 '+a+' Hatası',a_forced:'🟢 '+a+' Rakip Hatası',b_score:'🔵 '+b+' Sayı',b_error:'🔴 '+b+' Hatası',b_forced:'🟢 '+b+' Rakip Hatası'}[e]||e)}
+function eventResult(e){return e||'a_score'}
+function matchScore(m,setNo){let pts=m.points.filter(p=>(p.set||1)===setNo);let a=pts.filter(p=>eventPointWinner(p.event||p.result)==='a').length;return [a,pts.length-a]}
+function matchTotalScore(m){let pts=m.points||[],a=pts.filter(p=>eventPointWinner(p.event||p.result)==='a').length;return [a,pts.length-a]}
+function matchPointCatalog(){
+ return {
+  a_score:['Servis Ace','Blok','Smaç','Hücum','Plase','Diğer'],
+  a_error:['Servis Hatası','Pas Hatası','Manşet Hatası','File Teması','Hücum Hatası','Smaç Hatası','Blok Hatası','Defans Hatası','Diğer'],
+  a_forced:['Rakip Hatası - Servis Karşılama','Rakip Hatası - Manşet','Rakip Hatası - Pas','Rakip Hatası - Hücum','Rakip Hatası - Smaç','Rakip Hatası - Blok','Rakip Hatası - Savunma','Rakip Hatası - File Teması','Rakip Hatası - Diğer'],
+  b_score:['Sayı','Diğer'],
+  b_error:['Servis Hatası','Pas Hatası','Manşet Hatası','File Teması','Hücum Hatası','Smaç Hatası','Blok Hatası','Defans Hatası','Diğer'],
+  b_forced:['Rakip Hatası - Servis Karşılama','Rakip Hatası - Manşet','Rakip Hatası - Pas','Rakip Hatası - Hücum','Rakip Hatası - Smaç','Rakip Hatası - Blok','Rakip Hatası - Savunma','Rakip Hatası - File Teması','Rakip Hatası - Diğer']
+ };
+}
+function normalizeMatchPoints(m){
+ if(!Array.isArray(m.points))m.points=[];if(!m.currentSet)m.currentSet=1;if(!m.sets)m.sets=3;
+ m.points.forEach(p=>{
+  if(!p.set)p.set=1;
+  if(!p.result)p.result=p.side==='biz'?'biz_sayi':'rakip_sayi';
+  if(!p.action)p.action=p.reason||'Diğer';
+  if(!p.event){
+   if(p.result==='biz_sayi')p.event=(p.action||'').startsWith('Rakip Hatası')?'a_forced':'a_score';
+   else if(p.result==='biz_hata')p.event='a_error';
+   else if(p.result==='rakip_hata')p.event='a_forced';
+   else p.event='b_score';
+  }
+ });
+}
+function resultLabel(r){return ({biz_sayi:'🟧 Biz Sayı',biz_hata:'🔴 Biz Hata',rakip_hata:'🟢 Rakip Hatası',rakip_sayi:'🔵 Rakip Sayı'}[r]||r)}
+function actionOptions(result,selected){return (matchPointCatalog()[result]||[]).map(x=>`<option ${x===selected?'selected':''}>${x}</option>`).join('')}
+function quickPoint(id,event){
+ let m=d.matches.find(x=>x.id===id);if(!m)return;normalizeMatchPoints(m);
+ let player=$('q_player')?.value||'',action=$('q_action')?.value||((matchPointCatalog()[event]||[])[0]||'Diğer');
+ if(player&&m.internal){
+  let side=teamPlayers(m.teamId).some(p=>p.id===player)?'a':teamPlayers(m.team2Id).some(p=>p.id===player)?'b':'';
+  if((event.startsWith('a_')&&side!=='a')||(event.startsWith('b_')&&side!=='b'))return toast('Seçilen olay ile oyuncunun takımı uyuşmuyor.');
+ }
+ let point={id:uid('pt'),event,side:event.startsWith('a_')?'biz':'rakip',playerId:player,action,reason:action,time:new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}),set:m.currentSet||1};
+ m.points.push(point);save();liveMatch(id);toast(eventLabel(event,m)+' kaydedildi.');
+}
+function refreshMatchAction(){let e=$('q_result')?.value,el=$('q_action');if(el)el.innerHTML=actionOptions(e,el.value)}
+function liveMatch(id){
+ let m=d.matches.find(x=>x.id===id);if(!m)return;normalizeMatchPoints(m);
+ let a=teamPlayers(m.teamId),b=m.internal?teamPlayers(m.team2Id):[],current=m.currentSet||1,total=matchTotalScore(m),ss=matchScore(m,current);
+ let last=m.points[m.points.length-1]||{},event=last.event||'a_score',action=last.action||'';
+ let opts=a.map(p=>`<option value="${p.id}" ${last.playerId===p.id?'selected':''}>🟧 ${esc(p.name)} #${esc(p.no||'-')}</option>`).join('');
+ if(m.internal)opts+=b.map(p=>`<option value="${p.id}" ${last.playerId===p.id?'selected':''}>🔵 ${esc(p.name)} #${esc(p.no||'-')}</option>`).join('');
+ let setBadges=Array.from({length:Number(m.sets)||3},(_,i)=>{let s=matchScore(m,i+1),r=(m.setResults||[]).find(x=>x.set===i+1),w=r?(r.winner==='biz'?' 🏆 '+esc(m.team):(r.winner==='rakip'?' 🏆 '+esc(m.internal?m.team2:m.opponent):'')):'';return `<span class="setbadge">${i+1}. set ${s[0]}-${s[1]}${w}</span>`}).join('');
+ let labels=m.internal?[['a_score','🟧 '+m.team+' Sayı'],['a_error','🔴 '+m.team+' Hatası'],['a_forced','🟢 '+m.team+' Rakip Hatası'],['b_score','🔵 '+m.team2+' Sayı'],['b_error','🔴 '+m.team2+' Hatası'],['b_forced','🟢 '+m.team2+' Rakip Hatası']]:[['a_score','🟧 '+m.team+' Sayı'],['a_error','🔴 '+m.team+' Hatası'],['a_forced','🟢 '+m.team+' Rakip Hatası'],['b_score','🔵 Rakip Sayı']];
+ openModal('⚡ Hızlı Maç Analizi — '+esc(m.team)+' 🆚 '+esc(m.internal?m.team2:m.opponent),`
+ <div class="analysis-grid"><div class="mini-stat"><div class="muted">${esc(m.team)}</div><div class="score">${total[0]}</div></div><div class="mini-stat"><div class="muted">${esc(m.internal?m.team2:m.opponent)}</div><div class="score">${total[1]}</div></div><div class="mini-stat"><div class="muted">${current}. Set</div><div class="score">${ss[0]} - ${ss[1]}</div></div><div class="mini-stat"><div class="muted">Aksiyon</div><div class="score">${m.points.length}</div></div></div>
+ <br><div class="setbar">
+ <b>Setler:</b> ${setBadges}
+ <button class="btn" onclick="finishSet('${id}','biz')">🏆 ${esc(m.team)} Seti Kazandı</button>
+ ${m.internal?`<button class="btn" onclick="finishSet('${id}','rakip')">🏆 ${esc(m.team2)} Seti Kazandı</button>`:`<button class="btn" onclick="finishSet('${id}','rakip')">🏆 Rakip Seti Kazandı</button>`}
+ <button class="btn danger" onclick="finishMatch('${id}')">🏁 Maçı Bitir</button>
+</div>
+ <hr><div class="field"><label>Oyuncu</label><select id="q_player"><option value="">Oyuncu seç / rakip sayı için boş bırak</option>${opts}</select></div>
+ <div class="field"><label>Olay türü</label><select id="q_result" onchange="refreshMatchAction()">${labels.map(x=>`<option value="${x[0]}" ${x[0]===event?'selected':''}>${x[1]}</option>`).join('')}</select></div>
+ <div class="field"><label>Teknik / Hata nedeni</label><select id="q_action">${actionOptions(event,action)}</select></div>
+ <div class="quick-grid"><button class="quick-btn orange" onclick="quickPoint('${id}','a_score')">🟧 ${esc(m.team)} SAYI</button><button class="quick-btn" style="background:#fff1f2;border-color:#fda4af" onclick="quickPoint('${id}','a_error')">🔴 ${esc(m.team)} HATA</button><button class="quick-btn" style="background:#f0fdf4;border-color:#86efac" onclick="quickPoint('${id}','a_forced')">🟢 RAKİP HATASI</button>${m.internal?`<button class="quick-btn blue" onclick="quickPoint('${id}','b_score')">🔵 ${esc(m.team2)} SAYI</button><button class="quick-btn" style="background:#fff1f2;border-color:#fda4af" onclick="quickPoint('${id}','b_error')">🔴 ${esc(m.team2)} HATA</button><button class="quick-btn" style="background:#eff6ff;border-color:#93c5fd" onclick="quickPoint('${id}','b_forced')">🔵 ${esc(m.team2)} RAKİP HATASI</button>`:`<button class="quick-btn blue" onclick="quickPoint('${id}','b_score')">🔵 RAKİP SAYI</button>`}</div>
+ <p class="muted">Kulüp içi maçta her olayın sorumlu takımı nettir. Böylece iki takımın oyuncu hataları ve katkıları birbirine karışmaz.</p>
+ <div class="section-title"><h3>Son 10 kayıt</h3><div class="spacer"></div><button class="btn" onclick="undoPoint('${id}')">↩️ Geri Al</button></div><div id="pointList">${m.points.slice(-10).reverse().map(p=>pointRow(p,m)).join('')||'<div class="card muted">Henüz veri yok.</div>'}</div>
+ <hr><div class="actions"><button class="btn" onclick="closeModal()">Kapat</button><button class="btn primary" onclick="matchAnalysis('${id}')">📊 Detaylı Analiz</button><button class="btn" onclick="matchTeamReport('${id}')">📄 Maç PDF</button><button class="btn danger" onclick="deleteMatch('${id}')">🗑️ Sil</button></div>`);
+}
+function finishSet(id,winner){
+ let m=d.matches.find(x=>x.id===id);if(!m)return;
+ normalizeMatchPoints(m);
+ if(m.finished)return toast('Bu maç zaten tamamlandı.');
+ let current=m.currentSet||1,max=Number(m.sets)||3;
+ m.setResults=Array.isArray(m.setResults)?m.setResults:[];
+ if(m.setResults.some(x=>x.set===current))return toast(current+'. set zaten tamamlandı.');
+ let score=matchScore(m,current);
+ m.setResults.push({set:current,biz:score[0],rakip:score[1],winner:winner||''});
+ if(current>=max){
+   m.finished=true;m.finishedAt=new Date().toISOString();m.winner=winner||'';
+   save();liveMatch(id);toast(current+'. set tamamlandı. Maç bitirildi.');return;
+ }
+ m.currentSet=current+1;
+ save();liveMatch(id);toast(current+'. seti tamamlandı. '+m.currentSet+'. sete geçildi.');
+}
+function finishMatch(id){
+ let m=d.matches.find(x=>x.id===id);if(!m)return;
+ if(m.finished)return toast('Bu maç zaten tamamlandı.');
+ if(!confirm('Maçı şimdi bitirmek istediğine emin misin?'))return;
+ normalizeMatchPoints(m);
+ m.finished=true;m.finishedAt=new Date().toISOString();
+ let wins=(m.setResults||[]).reduce((a,x)=>{if(x.winner==='biz')a.biz++;if(x.winner==='rakip')a.rakip++;return a},{biz:0,rakip:0});
+ m.winner=wins.biz>wins.rakip?'biz':wins.rakip>wins.biz?'rakip':'';
+ save();liveMatch(id);toast('Maç tamamlandı.');
+}
+function pointRow(p,m){let name=p.playerId?(d.players.find(x=>x.id===p.playerId)?.name||''):'Oyuncusuz / Rakip',side=p.event?.startsWith('b_')?(m.internal?m.team2:m.opponent):m.team;return `<div class="item"><b>${eventLabel(p.event||p.result,m)}</b> • ${esc(name)} • <strong>${esc(p.action||p.reason||'Diğer')}</strong><div class="muted">${p.set||1}. set • ${p.time||''} • ${esc(side)}</div></div>`}
+function addPoint(id){let m=d.matches.find(x=>x.id===id);if(!m)return;let result=$('pt_side')?.value==='biz'?'biz_sayi':'rakip_sayi',player=$('pt_player')?.value||'',action=$('pt_reason')?.value||'Diğer';m.points.push({id:uid('pt'),side:result==='biz_sayi'?'biz':'rakip',result,playerId:player,action,reason:action,time:new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}),set:m.currentSet||1});save();liveMatch(id);toast('Sayı kaydedildi.')}
+function undoPoint(id){let m=d.matches.find(x=>x.id===id);if(!m||!m.points.length)return toast('Geri alınacak kayıt yok.');m.points.pop();save();liveMatch(id);toast('Son kayıt geri alındı.')}
+function matchAnalysis(id){
+ let m=d.matches.find(x=>x.id===id);if(!m)return;normalizeMatchPoints(m);
+ let sides=[{name:m.team,side:'a',players:teamPlayers(m.teamId)}];if(m.internal)sides.push({name:m.team2,side:'b',players:teamPlayers(m.team2Id)});
+ let total=m.points.length||1;
+ function statsForPlayer(p,sideKey){
+  let mine=m.points.filter(x=>x.playerId===p.id);
+  let scored=mine.filter(x=>x.event===(sideKey==='a'?'a_score':'b_score')).length;
+  let forced=mine.filter(x=>x.event===(sideKey==='a'?'a_forced':'b_forced')).length;
+  let errors=mine.filter(x=>x.event===(sideKey==='a'?'a_error':'b_error')).length;
+  let opponentPoints=mine.filter(x=>x.event===(sideKey==='a'?'b_score':'a_score')).length+mine.filter(x=>x.event===(sideKey==='a'?'b_forced':'a_forced')).length;
+  let scoring={},erroring={},forcedTypes={};
+  mine.filter(x=>x.event===(sideKey==='a'?'a_score':'b_score')).forEach(x=>{let a=x.action||'Diğer';scoring[a]=(scoring[a]||0)+1});
+  mine.filter(x=>x.event===(sideKey==='a'?'a_error':'b_error')).forEach(x=>{let a=x.action||'Diğer';erroring[a]=(erroring[a]||0)+1});
+  mine.filter(x=>x.event===(sideKey==='a'?'a_forced':'b_forced')).forEach(x=>{let a=x.action||'Diğer';forcedTypes[a]=(forcedTypes[a]||0)+1});
+  let involvement=mine.length/total*100,sidePoints=m.points.filter(x=>{let e=x.event||x.result;return eventPointWinner(e)===sideKey}).length||1;
+  let contribution=Math.max(0,Math.min(100,(scored+forced-errors)/sidePoints*100)),efficiency=scored+forced-errors,errorRate=mine.length?errors/mine.length*100:0,sets={};
+  for(let sn=1;sn<=(Number(m.sets)||3);sn++){let sp=mine.filter(x=>(x.set||1)===sn);sets[sn]={scored:sp.filter(x=>x.event===(sideKey==='a'?'a_score':'b_score')).length,forced:sp.filter(x=>x.event===(sideKey==='a'?'a_forced':'b_forced')).length,errors:sp.filter(x=>x.event===(sideKey==='a'?'a_error':'b_error')).length,actions:sp.length};}
+  return {p,mine,scored,forced,errors,opponentPoints,involvement,contribution,scoring,erroring,forcedTypes,sets,efficiency,errorRate};
+ }
+ let fmt=o=>Object.entries(o).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<span class="badge">${esc(k)}: ${v}</span>`).join(' ')||'<span class="muted">—</span>',allSection='';
+ sides.forEach(s=>{
+  let pts=m.points.filter(x=>eventPointWinner(x.event||x.result)===s.side),sc=pts.filter(x=>(x.event||'')===(s.side==='a'?'a_score':'b_score')).length,err=pts.filter(x=>(x.event||'')===(s.side==='a'?'a_error':'b_error')).length,forced=pts.filter(x=>(x.event||'')===(s.side==='a'?'a_forced':'b_forced')).length;
+  let scoreMap={},errMap={},forcedMap={};
+  pts.filter(x=>x.event===(s.side==='a'?'a_score':'b_score')).forEach(x=>scoreMap[x.action||'Diğer']=(scoreMap[x.action||'Diğer']||0)+1);
+  m.points.filter(x=>x.event===(s.side==='a'?'a_error':'b_error')).forEach(x=>errMap[x.action||'Diğer']=(errMap[x.action||'Diğer']||0)+1);
+  m.points.filter(x=>x.event===(s.side==='a'?'a_forced':'b_forced')).forEach(x=>forcedMap[x.action||'Diğer']=(forcedMap[x.action||'Diğer']||0)+1);
+  let stats=s.players.map(p=>statsForPlayer(p,s.side));
+  let rows=stats.map(x=>`<tr><td><b>${esc(x.p.name)}</b></td><td>${x.scored}</td><td>${x.forced}</td><td>${x.errors}</td><td>${x.opponentPoints}</td><td>${x.involvement.toFixed(1)}%</td><td>${x.contribution.toFixed(1)}%</td></tr>`).join('');
+  let details=stats.map(x=>`<div class="card"><h3>👤 ${esc(x.p.name)}</h3><p><b>Sayı:</b> ${fmt(x.scoring)}</p><p><b>Rakibe aldırdığı hata:</b> ${fmt(x.forcedTypes)}</p><p><b>Yaptığı hata:</b> ${fmt(x.erroring)}</p></div>`).join('');
+  allSection+=`<h3>🏐 ${esc(s.name)}</h3><div class="analysis-grid"><div class="mini-stat"><b>Sayı</b><div class="score">${sc}</div></div><div class="mini-stat"><b>Rakibe Aldırılan Hata</b><div class="score">${forced}</div></div><div class="mini-stat"><b>Kendi Hata</b><div class="score">${err}</div></div></div><p><b>Sayı dağılımı:</b> ${fmt(scoreMap)}</p><p><b>Hata dağılımı:</b> ${fmt(errMap)}</p><p><b>Rakibe aldırılan hata dağılımı:</b> ${fmt(forcedMap)}</p><div class="tablewrap"><table><thead><tr><th>Oyuncu</th><th>Sayı</th><th>Rakibe Hata</th><th>Kendi Hata</th><th>Rakip Sayısı</th><th>Katılım %</th><th>Katkı %</th></tr></thead><tbody>${rows||'<tr><td colspan="7">Oyuncu yok.</td></tr>'}</tbody></table></div><h4>🔎 Teknik Ayrıntılar</h4>${details||'<div class="muted">Oyuncu verisi yok.</div>'}`;
+ });
+ let sets=Array.from({length:Number(m.sets)||3},(_,i)=>{let s=matchScore(m,i+1);return `<div class="mini-stat"><b>${i+1}. Set</b><div class="score">${s[0]} - ${s[1]}</div></div>`}).join('');
+ let totalScore=matchTotalScore(m);
+ openModal('📊 Detaylı Maç Analizi — '+esc(m.team)+' 🆚 '+esc(m.internal?m.team2:m.opponent),`<div class="analysis-grid"><div class="mini-stat"><div class="muted">${esc(m.team)}</div><div class="score">${totalScore[0]}</div></div><div class="mini-stat"><div class="muted">${esc(m.internal?m.team2:m.opponent)}</div><div class="score">${totalScore[1]}</div></div><div class="mini-stat"><div class="muted">Set Sistemi</div><div class="score">${m.sets}</div></div><div class="mini-stat"><div class="muted">Toplam Aksiyon</div><div class="score">${m.points.length}</div></div></div><h3>🏁 Set Analizi</h3><div class="analysis-grid">${sets}</div>${allSection}<br><div class="actions"><button class="btn primary" onclick="matchTeamReport('${id}')">📄 Tam Maç PDF</button><button class="btn" onclick="liveMatch('${id}')">⚡ Veri Girişi</button></div>`);
+}
 function testForm(playerId='',testName=''){
  let p=playerId||state.testPlayer||d.players[0]?.id||'';
  let selected=testName||'';
@@ -323,7 +427,69 @@ function saveMessage(){let m={id:uid('msg'),title:$('msg_title').value||'Duyuru'
 function addNotification(title,body){d.notifications.unshift({id:uid('n'),title,body,date:new Date().toISOString(),read:false});save();$('notifCount').textContent=d.notifications.filter(n=>!n.read).length}
 function notifications(){let list=d.notifications;$('notifications').innerHTML=`<div class="section-title"><h2>🔔 Bildirimler</h2><button class="btn" onclick="d.notifications.forEach(n=>n.read=true);save();notifications();$('notifCount').textContent=0">Tümünü okundu yap</button><button class="btn danger" onclick="if(confirm('Tüm bildirimler silinsin mi?')){d.notifications=[];save();notifications();$('notifCount').textContent=0}">🗑️ Tümünü sil</button></div><div class="list">${list.map(n=>`<div class="item" onclick="nRead('${n.id}')"><b>${esc(n.title)}</b><div>${esc(n.body)}</div><div class="muted">${new Date(n.date).toLocaleString('tr-TR')}</div></div>`).join('')||'<div class="card muted">Bildirim yok.</div>'}</div>`}
 function nRead(id){let n=d.notifications.find(x=>x.id===id);if(n)n.read=true;save();notifications();$('notifCount').textContent=d.notifications.filter(n=>!n.read).length}
-function reportPlayer(id){let p=d.players.find(x=>x.id===id);let ts=d.tests.filter(x=>x.playerId===id);return `<div class="card"><h3>${esc(p.name)} — Performans Raporu</h3><p>Takımlar: ${playerTeams(p).map(t=>esc(t.name)).join(', ')||'Takımsız'}</p><p>Test kaydı: ${ts.length}</p><p>Bu bölüm V3.0 temel raporunu gösterir. PDF çıktısı ticari sürümde aynı veri yapısından üretilecek.</p><button class="btn primary" onclick="window.print()">🖨️ Yazdır / PDF</button></div>`}
+function playerMatchStats(matchId,playerId){
+ let m=d.matches.find(x=>x.id===matchId);if(!m)return null;normalizeMatchPoints(m);
+ let p=d.players.find(x=>x.id===playerId),side=m.internal&&teamPlayers(m.team2Id).some(x=>x.id===playerId)?'b':'a',mine=(m.points||[]).filter(x=>x.playerId===playerId);
+ let scored=mine.filter(x=>x.event===(side==='a'?'a_score':'b_score')).length,forced=mine.filter(x=>x.event===(side==='a'?'a_forced':'b_forced')).length,errors=mine.filter(x=>x.event===(side==='a'?'a_error':'b_error')).length;
+ let opponentPoints=mine.filter(x=>x.event===(side==='a'?'b_score':'a_score')).length+mine.filter(x=>x.event===(side==='a'?'b_forced':'a_forced')).length;
+ let actions={},scoring={},erroring={},forcedTypes={};
+ mine.forEach(x=>{let a=x.action||x.reason||'Diğer';actions[a]=(actions[a]||0)+1});
+ mine.filter(x=>x.event===(side==='a'?'a_score':'b_score')).forEach(x=>{let a=x.action||'Diğer';scoring[a]=(scoring[a]||0)+1});
+ mine.filter(x=>x.event===(side==='a'?'a_error':'b_error')).forEach(x=>{let a=x.action||'Diğer';erroring[a]=(erroring[a]||0)+1});
+ mine.filter(x=>x.event===(side==='a'?'a_forced':'b_forced')).forEach(x=>{let a=x.action||'Diğer';forcedTypes[a]=(forcedTypes[a]||0)+1});
+ let involvement=m.points.length?mine.length/m.points.length*100:0,teamSidePoints=m.points.filter(x=>eventPointWinner(x.event||x.result)===side).length||1,contribution=Math.max(0,Math.min(100,(scored+forced-errors)/teamSidePoints*100)),efficiency=scored+forced-errors,errorRate=mine.length?errors/mine.length*100:0,sets={};
+ for(let sn=1;sn<=(Number(m.sets)||3);sn++){let sp=mine.filter(x=>(x.set||1)===sn);sets[sn]={scored:sp.filter(x=>x.event===(side==='a'?'a_score':'b_score')).length,forced:sp.filter(x=>x.event===(side==='a'?'a_forced':'b_forced')).length,errors:sp.filter(x=>x.event===(side==='a'?'a_error':'b_error')).length,actions:sp.length};}
+ return {m,p,side,mine,scored,forced,errors,opponentPoints,actions,scoring,erroring,forcedTypes,involvement,contribution,efficiency,errorRate,sets,teamSidePoints};
+}
+function statsBadges(o){return Object.entries(o).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<span class="badge">${esc(k)}: ${v}</span>`).join(' ')||'<span class="muted">—</span>'}
+function makePlayerMatchReport(matchId,playerId){
+ let st=playerMatchStats(matchId,playerId),p=d.players.find(x=>x.id===playerId);if(!st||!p)return '';
+ let opponent=st.m.internal?(st.side==='biz'?st.m.team2:st.m.team):st.m.opponent;
+ let setRows=Object.entries(st.sets).map(([s,v])=>`<tr><td>${s}. Set</td><td>${v.scored}</td><td>${v.forced}</td><td>${v.errors}</td><td>${v.actions}</td></tr>`).join('');
+ return `<div class="print-report" id="pmr_${matchId}_${playerId}"><h1>🏐 VolleyScout — Sporcu Maç Performans Raporu</h1><h2>${esc(p.name)}</h2><p><b>${esc(st.m.team)} 🆚 ${esc(st.m.internal?st.m.team2:st.m.opponent)}</b><br>${esc(st.m.date)} ${esc(st.m.time||'')} • ${esc(st.m.venue||'')} ${st.m.internal?'• Kulüp İçi Maç':''}</p>
+ <div class="analysis-grid"><div class="mini-stat"><b>Aldığı Sayılar</b><div class="score">${st.scored}</div></div><div class="mini-stat"><b>Rakibe Aldırdığı Hata</b><div class="score">${st.forced}</div></div><div class="mini-stat"><b>Yaptığı Hatalar</b><div class="score">${st.errors}</div></div><div class="mini-stat"><b>Rakipten Aldığı Sayı</b><div class="score">${st.opponentPoints}</div></div><div class="mini-stat"><b>Oyuncu Katılımı</b><div class="score">${st.involvement.toFixed(1)}%</div></div><div class="mini-stat"><b>Oyuna Katkı</b><div class="score">${st.contribution.toFixed(1)}%</div></div><div class="mini-stat"><b>Verim</b><div class="score">${st.efficiency}</div></div><div class="mini-stat"><b>Hata Oranı</b><div class="score">${st.errorRate.toFixed(1)}%</div></div></div>
+ <h3>🏆 Aldığı Sayılar</h3><div>${statsBadges(st.scoring)}</div>
+ <h3>🎯 Rakibe Aldırdığı Hatalar</h3><div>${statsBadges(st.forcedTypes)}</div>
+ <h3>❌ Yaptığı Hatalar</h3><div>${statsBadges(st.erroring)}</div>
+ <h3>📊 Set Bazlı Performans</h3><div class="tablewrap"><table><thead><tr><th>Set</th><th>Sayı</th><th>Zorlanan Hata</th><th>Kendi Hatası</th><th>Aksiyon</th></tr></thead><tbody>${setRows}</tbody></table></div>
+ <p class="muted">Katılım %: kaydedilmiş oyuncu aksiyonları / toplam maç aksiyonu. Oyuna katkı %: (sayı + rakibe aldırılan hata − kendi hatası) / takımın kaydedilmiş aksiyonları. Verim: sayı + rakibe aldırılan hata − hata.</p></div>`;
+}
+function printPlayerMatchReport(matchId,playerId){let html=makePlayerMatchReport(matchId,playerId);let w=window.open('','_blank');if(!w)return toast('PDF için açılır pencereye izin ver.');w.document.write(`<html><head><title>VolleyScout Maç Raporu</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Arial;padding:24px;color:#222}h1{color:#ea580c}.analysis-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.mini-stat{border:1px solid #ddd;border-radius:12px;padding:12px}.score{font-size:24px;font-weight:800;margin-top:6px}.badge{display:inline-block;padding:5px 8px;background:#fff1e6;border-radius:999px;margin:3px;font-size:12px}.tablewrap{overflow:auto}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:7px;text-align:left}@media(max-width:700px){.analysis-grid{grid-template-columns:1fr 1fr}}@media print{button{display:none}}</style></head><body>${html}<script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script></body></html>`);w.document.close()}
+function sharePlayerMatchReport(matchId,playerId){let st=playerMatchStats(matchId,playerId),p=d.players.find(x=>x.id===playerId);if(!st||!p)return;let text=`🏐 VolleyScout Maç Performansı\n${p.name}\n${st.m.team} 🆚 ${st.m.opponent}\n\nAldığı sayı: ${st.scored}\nRakibe aldırdığı hata: ${st.forced}\nYaptığı hata: ${st.errors}\nKatılım: %${st.involvement.toFixed(1)}\nOyuna katkı: %${st.contribution.toFixed(1)}\n\nSayılar: ${Object.entries(st.scoring).map(x=>x[0]+' '+x[1]).join(', ')||'—'}\nHatalar: ${Object.entries(st.erroring).map(x=>x[0]+' '+x[1]).join(', ')||'—'}`;if(navigator.share){navigator.share({title:'VolleyScout Maç Performansı',text}).catch(()=>{});}else{navigator.clipboard?.writeText(text);toast('Performans özeti panoya kopyalandı.')}}
+
+function reportPlayersForMatch(m){
+ let ids=new Set(m.points.map(x=>x.playerId).filter(Boolean));
+ return [...ids].map(id=>d.players.find(p=>p.id===id)).filter(Boolean);
+}
+function matchReportHTML(matchId){
+ let m=d.matches.find(x=>x.id===matchId);if(!m)return '';normalizeMatchPoints(m);
+ let sides=[{name:m.team,side:'a',players:teamPlayers(m.teamId)}];if(m.internal)sides.push({name:m.team2,side:'b',players:teamPlayers(m.team2Id)});
+ let total=matchTotalScore(m),setRows=Array.from({length:Number(m.sets)||3},(_,i)=>{let s=matchScore(m,i+1);return `<tr><td>${i+1}. Set</td><td>${s[0]}</td><td>${s[1]}</td></tr>`}).join('');
+ let sections=sides.map(s=>{
+  let sc=m.points.filter(x=>x.event===(s.side==='a'?'a_score':'b_score')).length,err=m.points.filter(x=>x.event===(s.side==='a'?'a_error':'b_error')).length,forced=m.points.filter(x=>x.event===(s.side==='a'?'a_forced':'b_forced')).length;
+  let rows=s.players.map(p=>{let st=playerMatchStats(matchId,p.id),badges=o=>Object.entries(o).map(([k,v])=>`${esc(k)} (${v})`).join(', ')||'—';return `<tr><td><b>${esc(p.name)}</b></td><td>${st.scored}</td><td>${st.forced}</td><td>${st.errors}</td><td>${st.opponentPoints}</td><td>${st.involvement.toFixed(1)}%</td><td>${st.contribution.toFixed(1)}%</td><td>${st.efficiency}</td><td>${badges(st.scoring)}</td><td>${badges(st.forcedTypes)}</td><td>${badges(st.erroring)}</td></tr>`}).join('');
+  return `<h2>🏐 ${esc(s.name)}</h2><div class="cards"><div><b>Sayı</b><strong>${sc}</strong></div><div><b>Rakibe Aldırılan Hata</b><strong>${forced}</strong></div><div><b>Kendi Hata</b><strong>${err}</strong></div></div><table><thead><tr><th>Oyuncu</th><th>Sayı</th><th>Rakibe Hata</th><th>Kendi Hata</th><th>Rakip Sayısı</th><th>Katılım</th><th>Katkı</th><th>Verim</th><th>Sayı Türleri</th><th>Rakibe Hata Türleri</th><th>Hata Türleri</th></tr></thead><tbody>${rows||'<tr><td colspan="11">Oyuncu verisi yok.</td></tr>'}</tbody></table>`;
+ }).join('');
+ return `<div class="report"><h1>🏐 VolleyScout — Tam Maç Performans Raporu</h1><h2>${esc(m.team)} 🆚 ${esc(m.internal?m.team2:m.opponent)}</h2><p>${esc(m.date)} ${esc(m.time||'')} • ${esc(m.venue||'')} • ${m.sets} set ${m.internal?'• Kulüp İçi Maç':''}</p><div class="scorebox">${total[0]} — ${total[1]}</div><h2>🏁 Set Sonuçları</h2><table><thead><tr><th>Set</th><th>${esc(m.team)}</th><th>${esc(m.internal?m.team2:m.opponent)}</th></tr></thead><tbody>${setRows}</tbody></table>${sections}<p class="note">Katılım %: oyuncunun kaydedilen aksiyonlarının toplam maç aksiyonlarına oranı. Oyuna katkı %: (sayı + rakibe aldırılan hata − kendi hatası) / takımın kaydedilmiş sayı aksiyonları. Verim = sayı + rakibe aldırılan hata − hata. File teması ayrı hata türü olarak raporlanır.</p></div>`;
+}
+function printMatchReport(matchId){
+ let html=matchReportHTML(matchId);if(!html)return;
+ let w=window.open('','_blank');if(!w)return toast('PDF için açılır pencereye izin ver.');
+ w.document.write(`<html><head><title>VolleyScout Maç Raporu</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Arial;padding:24px;color:#222}h1{color:#ea580c}h2{margin-top:24px}.scorebox{font-size:38px;font-weight:800;text-align:center;padding:18px;border:2px solid #ea580c;border-radius:14px;margin:15px 0}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.cards div{border:1px solid #ddd;border-radius:10px;padding:10px}.cards strong{display:block;font-size:24px;margin-top:5px}table{width:100%;border-collapse:collapse;margin:10px 0 20px}th,td{border:1px solid #ddd;padding:7px;text-align:left;font-size:12px}th{background:#fff3e8}.note{font-size:11px;color:#666}@media print{button{display:none}}@media(max-width:700px){.cards{grid-template-columns:1fr}}</style></head><body>${html}<script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script></body></html>`);w.document.close();
+}
+function matchTeamReport(matchId){
+ let m=d.matches.find(x=>x.id===matchId);if(!m)return;
+ openModal('📄 Maç Raporu',`<div class="card"><h3>${esc(m.team)} 🆚 ${esc(m.internal?m.team2:m.opponent)}</h3><p>2 / 3 / 5 set sistemine göre tam maç raporu.</p><div class="actions"><button class="btn primary" onclick="printMatchReport('${matchId}')">🖨️ PDF / Yazdır</button><button class="btn" onclick="shareMatchSummary('${matchId}')">📤 Mesajla Paylaş</button></div><p class="muted">iPad'de yazdır ekranında “PDF'ye Kaydet” seçeneğini kullanarak dosyayı Mesajlar/WhatsApp ile gönderebilirsin.</p></div>`);
+}
+function shareMatchSummary(matchId){
+ let m=d.matches.find(x=>x.id===matchId);if(!m)return;let s=matchTotalScore(m);
+ let txt=`🏐 VolleyScout Maç Analizi\n${m.team} 🆚 ${m.internal?m.team2:m.opponent}\n${m.date} • ${m.sets} set\nSkor: ${s[0]} - ${s[1]}\n\nDetaylı PDF raporu uygulamadaki “PDF / Yazdır” düğmesinden oluşturulabilir.`;
+ if(navigator.share)navigator.share({title:'VolleyScout Maç Analizi',text:txt}).catch(()=>{});else{navigator.clipboard?.writeText(txt);toast('Özet panoya kopyalandı.')}
+}
+function reportPlayer(id){
+ let p=d.players.find(x=>x.id===id),ts=d.tests.filter(x=>x.playerId===id),ms=d.matches.filter(m=>{let ids=new Set([...teamPlayers(m.teamId),...(m.internal?teamPlayers(m.team2Id):[])].map(x=>x.id));return ids.has(id)});
+ return `<div class="card"><h3>${esc(p.name)} — Performans Raporu</h3><p>Takımlar: ${playerTeams(p).map(t=>esc(t.name)).join(', ')||'Takımsız'}</p><p>Test kaydı: ${ts.length} • Maç kaydı: ${ms.length}</p><div class="field"><label>Maç seç</label><select id="pr_match"><option value="">Maç seç</option>${ms.map(m=>`<option value="${m.id}">${esc(m.date)} • ${esc(m.team)} 🆚 ${esc(m.internal?m.team2:m.opponent)}</option>`).join('')}</select></div><br><div class="actions"><button class="btn primary" onclick="if($('pr_match').value)openModal('📊 Maç Performansı',makePlayerMatchReport($('pr_match').value,'${id}'))">📊 Sporcu Analizi</button><button class="btn" onclick="if($('pr_match').value)printPlayerMatchReport($('pr_match').value,'${id}')">🖨️ Sporcu PDF</button><button class="btn" onclick="if($('pr_match').value)sharePlayerMatchReport($('pr_match').value,'${id}')">📤 Mesaj Özeti</button></div><p class="muted">Sporcu PDF'si; sayı, rakibe aldırılan hata, kendi hataları, file teması dahil hata türleri, set bazlı performans, katılım ve katkı yüzdesini içerir.</p></div>`;
+}
 function reports(){$('reports').innerHTML=`<div class="section-title"><h2>📊 Raporlar</h2></div><div class="grid"><div class="card"><h3>👤 Sporcu Raporu</h3><div class="muted">Test + yoklama + antrenman + maç</div><br><select onchange="if(this.value)openModal('Sporcu Raporu',reportPlayer(this.value))"><option value="">Sporcu seç</option>${d.players.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select></div><div class="card"><h3>🏐 Takım Raporu</h3><div class="muted">Takım katılımı ve maç verileri</div></div><div class="card"><h3>🏫 Spor Okulu</h3><div class="muted">Grup bazlı yoklama ve test</div></div><div class="card"><h3>👨‍👩‍👧 Veli PDF</h3><div class="muted">Sade, anlaşılır performans özeti</div></div></div>`}
 function leagueForm(l={}){return `<div class="field"><label>Lig adı</label><input id="lg_name" value="${esc(l.name)}" placeholder="Örn. Gelişim Ligi"></div><br><div class="actions"><button class="btn primary" onclick="saveLeague('${l.id||''}')">💾 Kaydet</button>${l.id?`<button class="btn danger" onclick="deleteLeague('${l.id}')">🗑️ Sil</button>`:''}</div>`}
 function saveLeague(id){let name=$('lg_name').value.trim();if(!name)return toast('Lig adı gir.');let l=id?d.leagues.find(x=>x.id===id):{id:uid('lg')};l.name=name;if(!id)d.leagues.push(l);save();closeModal();renderAll();toast('Lig kaydedildi.')}
@@ -350,7 +516,7 @@ save();
 boot();
 
 // FINAL PWA cache/version guard
-try{if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister()));}}catch(e){}
+try{if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(rs=>{let had=!!navigator.serviceWorker.controller;Promise.all(rs.map(r=>r.unregister())).then(()=>{if(had&&!sessionStorage.getItem('vs_sw_reloaded')){sessionStorage.setItem('vs_sw_reloaded','1');location.reload();}});});}}catch(e){}
 </script>
 </body>
 </html>
