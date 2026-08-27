@@ -29,7 +29,7 @@ main{padding:18px}.view{display:none}.view.active{display:block}.grid{display:gr
 <style>
 .skill-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}.skill-chip{display:flex;align-items:center;gap:6px;padding:10px;border:1px solid var(--line);border-radius:12px;background:#fff}.quick-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.quick-btn{min-height:64px;border-radius:16px;font-size:18px;font-weight:800;background:#fff;border:2px solid var(--line)}.quick-btn.orange{background:#fff7ed;border-color:#fb923c}.quick-btn.blue{background:#eff6ff;border-color:#93c5fd}.reason-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.reason-btn{padding:10px 6px;border-radius:12px;border:1px solid var(--line);background:#fff}.reason-btn.active{background:#f97316;color:#fff;border-color:#f97316}.analysis-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}.mini-stat{padding:14px;border:1px solid var(--line);border-radius:14px;background:#fff}.setbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.setbadge{padding:7px 10px;border-radius:999px;background:#fff;border:1px solid var(--line)}
 </style>
-</head>
+<style>#eventGrid{grid-template-columns:repeat(4,minmax(120px,1fr))}.quick-btn,.reason-btn{cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}.quick-btn{min-height:56px;font-weight:800}@media(max-width:650px){#eventGrid{grid-template-columns:repeat(2,1fr)}}</style></head>
 <body>
 <div id="setup" class="setup">
   <div class="card">
@@ -261,14 +261,48 @@ function resultLabel(r){return ({biz_sayi:'🟧 Biz Sayı',biz_hata:'🔴 Biz Ha
 function actionOptions(result,selected){return (matchPointCatalog()[result]||[]).map(x=>`<option ${x===selected?'selected':''}>${x}</option>`).join('')}
 function quickPoint(id,side){
 let m=d.matches.find(x=>x.id===id);if(!m)return;
-if(!m.currentSet)m.currentSet=1;
-let player=$('q_player')?.value||'',reason=$('q_reason')?.value||'Servis';
-let event=side==='biz'?'biz_sayi':'rakip_sayi';
-m.points.push({id:uid('pt'),side,playerId:side==='biz'?player:'',reason,action:reason,event,result:event,time:new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}),set:m.currentSet});
-save();liveMatch(id);
+normalizeMatchPoints(m);
+let event=$('q_result')?.value||'a_score',player=$('q_player')?.value||'',reason=$('q_reason')?.value||'Diğer';
+let winner=(event==='a_score'||event==='a_forced')?'biz':'rakip';
+if(side!==winner){toast(event==='a_error'?'Biz hatası için 🔵 Rakip +1 kullan.':event==='a_forced'?'Rakip hatası için 🟧 Biz +1 kullan.':'Seçilen olay ile sayı düğmesi uyuşmuyor.');return;}
+m.points.push({id:uid('pt'),side,playerId:(event==='b_score'?'':player),reason,action:reason,event,result:event==='a_error'?'rakip_sayi':event==='b_score'?'rakip_sayi':'biz_sayi',time:new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}),set:m.currentSet||1});
+save();liveMatch(id);toast('Kayıt eklendi.');
 }
 function refreshMatchAction(){let e=$('q_result')?.value,el=$('q_action');if(el)el.innerHTML=actionOptions(e,el.value)}
-function liveMatch(id){let m=d.matches.find(x=>x.id===id);if(!m)return;let players=teamPlayers(m.teamId);if(!Array.isArray(m.points))m.points=[];if(!m.currentSet)m.currentSet=1;let current=m.currentSet;let setBiz=m.points.filter(p=>(p.set||1)===current&&p.side==='biz').length,setRak=m.points.filter(p=>(p.set||1)===current&&p.side==='rakip').length;let totalBiz=m.points.filter(p=>p.side==='biz').length,totalRak=m.points.filter(p=>p.side==='rakip').length;let last=m.points[m.points.length-1]||{};let reasons=['Servis','Pas','Manşet','Hücum','Blok','Savunma','Rakip hatası','Diğer'];openModal('⚡ Hızlı Maç Analizi — '+esc(m.team)+' 🆚 '+esc(m.opponent),`<div class="analysis-grid"><div class="mini-stat"><div class="muted">Toplam</div><div class="score" id="ls_total">${totalBiz} - ${totalRak}</div></div><div class="mini-stat"><div class="muted">Set ${current}</div><div class="score" id="ls_set">${setBiz} - ${setRak}</div></div></div><br><div class="setbar"><b>Set:</b> ${Array.from({length:current},(_,i)=>`<span class="setbadge">${i+1}. set ${m.points.filter(p=>(p.set||1)===i+1&&p.side==='biz').length}-${m.points.filter(p=>(p.set||1)===i+1&&p.side==='rakip').length}</span>`).join('')}<button class="btn" onclick="finishSet('${id}')">🏁 Seti Bitir / Yeni Set</button></div><hr><div class="quick-grid"><button class="quick-btn orange" onclick="quickPoint('${id}','biz')">🟧 ${esc(m.team)} +1</button><button class="quick-btn blue" onclick="quickPoint('${id}','rakip')">🔵 ${esc(m.opponent)} +1</button></div><br><div class="field"><label>Oyuncu</label><select id="q_player"><option value="">Takım</option>${players.map(p=>`<option value="${p.id}" ${(last.playerId===p.id)?'selected':''}>${esc(p.name)} #${esc(p.no||'-')}</option>`).join('')}</select></div><div class="field"><label>Neden / Beceri</label><div class="reason-grid" id="reasonGrid">${reasons.map(x=>`<button type="button" class="reason-btn ${last.reason===x?'active':''}" onclick="selectReason(this,'${x}')">${x}</button>`).join('')}</div><input type="hidden" id="q_reason" value="${esc(last.reason||'Servis')}"></div><p class="muted">Son kullanılan oyuncu ve neden otomatik seçilir. Sayıya basmak tek dokunuşla kaydeder.</p><div class="section-title"><h3>Son 5 sayı</h3><div class="spacer"></div><button class="btn" onclick="undoPoint('${id}')">↩️ Geri Al</button></div><div id="pointList">${m.points.slice(-5).reverse().map(pointRow).join('')||'<div class="card muted">Henüz sayı yok.</div>'}</div><hr><div class="actions"><button class="btn" onclick="closeModal()">Kapat</button><button class="btn" onclick="matchAnalysis('${id}')">📊 Detaylı Analiz</button><button class="btn danger" onclick="deleteMatch('${id}')">🗑️ Maçı Sil</button></div>`);}
+function liveMatch(id){
+let m=d.matches.find(x=>x.id===id);if(!m)return;
+normalizeMatchPoints(m);
+let players=teamPlayers(m.teamId), current=m.currentSet||1;
+let totalBiz=m.points.filter(p=>eventPointWinner(p.event||p.result)==='a').length;
+let totalRak=m.points.length-totalBiz;
+let setBiz=m.points.filter(p=>(p.set||1)===current&&eventPointWinner(p.event||p.result)==='a').length;
+let setRak=m.points.filter(p=>(p.set||1)===current&&eventPointWinner(p.event||p.result)==='b').length;
+let last=m.points[m.points.length-1]||{};
+let selectedEvent=last.event||'a_score';
+let selectedAction=last.action||last.reason||'Servis';
+let labels=[['a_score','🟧 SAYI'],['a_error','🔴 BİZ HATASI'],['a_forced','🟢 RAKİP HATASI'],['b_score','🔵 RAKİP SAYI']];
+let reasons=matchPointCatalog()[selectedEvent]||matchPointCatalog().a_score;
+let playerOptions=players.map(p=>`<option value="${p.id}" ${last.playerId===p.id?'selected':''}>${esc(p.name)} #${esc(p.no||'-')}</option>`).join('');
+let eventButtons=labels.map(([e,l])=>`<button type="button" class="reason-btn ${selectedEvent===e?'active':''}" data-vsc-event="${e}">${l}</button>`).join('');
+let reasonButtons=reasons.map(r=>`<button type="button" class="reason-btn ${selectedAction===r?'active':''}" data-vsc-reason="${esc(r)}">${esc(r)}</button>`).join('');
+let setBadges=Array.from({length:current},(_,i)=>{
+let a=m.points.filter(p=>(p.set||1)===i+1&&eventPointWinner(p.event||p.result)==='a').length;
+let b=m.points.filter(p=>(p.set||1)===i+1&&eventPointWinner(p.event||p.result)==='b').length;
+return `<span class="setbadge">${i+1}. set ${a}-${b}</span>`;
+}).join('');
+openModal('⚡ Hızlı Maç Analizi — '+esc(m.team)+' 🆚 '+esc(m.opponent),`
+<div class="analysis-grid"><div class="mini-stat"><div class="muted">Toplam</div><div class="score">${totalBiz} - ${totalRak}</div></div><div class="mini-stat"><div class="muted">Set ${current}</div><div class="score">${setBiz} - ${setRak}</div></div></div>
+<br><div class="setbar"><b>Set:</b> ${setBadges}<button type="button" class="btn" data-vsc-finish="${id}">🏁 Seti Bitir / Yeni Set</button></div>
+<hr>
+<div class="field"><label>Olay</label><div class="reason-grid" id="eventGrid">${eventButtons}</div><input type="hidden" id="q_result" value="${esc(selectedEvent)}"></div>
+<div class="field"><label>Oyuncu</label><select id="q_player"><option value="">Oyuncu seç</option>${playerOptions}</select></div>
+<div class="field"><label>Neden / Beceri</label><div class="reason-grid" id="reasonGrid">${reasonButtons}</div><input type="hidden" id="q_reason" value="${esc(selectedAction)}"></div>
+<div class="quick-grid"><button type="button" class="quick-btn orange" data-vsc-point="${id}" data-vsc-side="biz">🟧 ${esc(m.team)} +1</button><button type="button" class="quick-btn blue" data-vsc-point="${id}" data-vsc-side="rakip">🔵 ${esc(m.opponent)} +1</button></div>
+<p class="muted">Önce olay türünü, sonra gerekiyorsa oyuncu ve beceriyi seç. Büyük sayı düğmesine bir kez basman yeterli.</p>
+<div class="section-title"><h3>Son 5 sayı</h3><div class="spacer"></div><button type="button" class="btn" data-vsc-undo="${id}">↩️ Geri Al</button></div>
+<div id="pointList">${m.points.slice(-5).reverse().map(pointRow).join('')||'<div class="card muted">Henüz sayı yok.</div>'}</div>
+<hr><div class="actions"><button type="button" class="btn" data-vsc-close>Kapat</button><button type="button" class="btn" data-vsc-analysis="${id}">📊 Detaylı Analiz</button><button type="button" class="btn danger" data-vsc-delete="${id}">🗑️ Maçı Sil</button></div>`);
+}
 function finishSet(id){let m=d.matches.find(x=>x.id===id);if(!m)return;normalizeMatchPoints(m);let max=Number(m.sets)||5;if((m.currentSet||1)>=max)return toast('Bu maç için seçilen set sayısına ulaşıldı.');m.currentSet=(m.currentSet||1)+1;save();liveMatch(id);toast((m.currentSet-1)+'. set tamamlandı. '+m.currentSet+'. sete geçildi.');}
 function pointRow(p){let name=p.playerId?(d.players.find(x=>x.id===p.playerId)?.name||''):'Takım';return `<div class="item"><b>${p.side==='biz'?'🟧 BİZ':'🔵 RAKİP'}</b> • ${esc(name)} • ${esc(p.reason)}<div class="muted">${p.time}</div></div>`}
 function addPoint(id){let m=d.matches.find(x=>x.id===id);if(!m)return;let result=$('pt_side')?.value==='biz'?'biz_sayi':'rakip_sayi',player=$('pt_player')?.value||'',action=$('pt_reason')?.value||'Diğer';m.points.push({id:uid('pt'),side:result==='biz_sayi'?'biz':'rakip',result,playerId:player,action,reason:action,time:new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}),set:m.currentSet||1});save();liveMatch(id);toast('Sayı kaydedildi.')}
@@ -464,6 +498,31 @@ boot();
 
 // FINAL PWA cache/version guard
 try{if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister()));}}catch(e){}
+
+document.addEventListener('click',function(ev){
+const t=ev.target.closest('[data-vsc-point],[data-vsc-event],[data-vsc-reason],[data-vsc-finish],[data-vsc-undo],[data-vsc-analysis],[data-vsc-delete],[data-vsc-close]');
+if(!t)return;
+ev.preventDefault();ev.stopPropagation();
+try{
+if(t.hasAttribute('data-vsc-point')){quickPoint(t.getAttribute('data-vsc-point'),t.getAttribute('data-vsc-side'));return;}
+if(t.hasAttribute('data-vsc-event')){
+const e=t.getAttribute('data-vsc-event');$('q_result').value=e;
+document.querySelectorAll('#eventGrid .reason-btn').forEach(x=>x.classList.remove('active'));t.classList.add('active');
+const rs=matchPointCatalog()[e]||[],rg=$('reasonGrid'),old=$('q_reason')?.value||'';
+if(rg)rg.innerHTML=rs.map(r=>`<button type="button" class="reason-btn ${r===old?'active':''}" data-vsc-reason="${esc(r)}">${esc(r)}</button>`).join('');
+if($('q_reason')&&!rs.includes(old))$('q_reason').value=rs[0]||'Diğer';return;
+}
+if(t.hasAttribute('data-vsc-reason')){
+const r=t.getAttribute('data-vsc-reason')||'Diğer';document.querySelectorAll('#reasonGrid .reason-btn').forEach(x=>x.classList.remove('active'));t.classList.add('active');$('q_reason').value=r;return;
+}
+if(t.hasAttribute('data-vsc-finish')){finishSet(t.getAttribute('data-vsc-finish'));return;}
+if(t.hasAttribute('data-vsc-undo')){undoPoint(t.getAttribute('data-vsc-undo'));return;}
+if(t.hasAttribute('data-vsc-analysis')){matchAnalysis(t.getAttribute('data-vsc-analysis'));return;}
+if(t.hasAttribute('data-vsc-delete')){deleteMatch(t.getAttribute('data-vsc-delete'));return;}
+if(t.hasAttribute('data-vsc-close')){closeModal();return;}
+}catch(err){console.error(err);toast('İşlem sırasında hata oluştu.');}
+},true);
+
 </script>
 </body>
 </html>
