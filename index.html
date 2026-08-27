@@ -90,9 +90,7 @@ function loadData(){
  let raw=null;try{raw=localStorage.getItem(KEY)}catch(e){}
  let saved=null;try{saved=raw?JSON.parse(raw):null}catch(e){saved=null}
  const x=Object.assign({},DEFAULT_DATA,saved||{});
- for(const k of ['players','teams','coaches','schoolGroups','schoolAttendance','attendance','trainings','matches','tests','tactics','messages','notifications']) { if(!Array.isArray(x[k])) x[k]=[]; else x[k]=x[k].filter(v=>v!==null&&v!==undefined&&typeof v==='object'); }
- if(!Array.isArray(x.leagues))x.leagues=[];
- if(x.leagues.length && x.leagues.some(v=>typeof v!=='object')) x.leagues=x.leagues.map(v=>typeof v==='string'?{id:uid('lg'),name:v}:v).filter(Boolean);
+ for(const k of ['players','teams','coaches','schoolGroups','schoolAttendance','attendance','trainings','matches','tests','tactics','messages','notifications']) if(!Array.isArray(x[k])) x[k]=[];
  if(!Array.isArray(x.leagues)||!x.leagues.length)x.leagues=LEAGUES_DEFAULT.slice();
  x.season=x.season||'2026-2027';
  x.players.forEach(p=>{if(!Array.isArray(p.teamIds))p.teamIds=p.teamId?[p.teamId]:[];p.teamId=p.teamIds[0]||'';});
@@ -114,14 +112,13 @@ function playerTeamIds(p){return Array.isArray(p.teamIds)?p.teamIds:(p.teamId?[p
 function playerTeams(p){return playerTeamIds(p).map(id=>d.teams.find(t=>t.id===id)).filter(Boolean)}
 function teamPlayers(id){return d.players.filter(p=>playerTeamIds(p).includes(id))}
 function finishSet(id){let m=d.matches.find(x=>x.id===id);if(!m)return;normalizeMatchPoints(m);let max=Number(m.sets)||3;if((m.currentSet||1)>=max)return toast('Seçilen tüm setler tamamlandı.');m.currentSet=(m.currentSet||1)+1;save();liveMatch(id);toast((m.currentSet-1)+'. set tamamlandı. '+m.currentSet+'. sete geçildi.')}
-function finishSetup(){let coach=$('setupCoach')?.value.trim()||'',club=$('setupClub')?.value.trim()||'';if(!coach||!club)return toast('Antrenör adı ve kulüp adı gerekli.');d.club=club;d.coach=coach;d.season=$('setupSeason')?.value.trim()||'2026-2027';save();boot();toast('VolleyScout hazır.')}
 function boot(){if(!d.club){$('setup').classList.remove('hidden');$('app').classList.add('hidden');return}$('setup').classList.add('hidden');$('app').classList.remove('hidden');$('brand').textContent=d.club;$('subbrand').textContent=d.coach+' • '+d.season;renderNav();renderAll();showView(state.view||'home')}
 function showView(v){if(!$(v))return;let prev=state.view;state.view=v;state.prevView=prev;document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));$(v).classList.add('active');document.querySelectorAll('.nav button,.drawerNav button').forEach(b=>b.classList.toggle('active',b.dataset.v===v));$('backBtn').classList.toggle('hidden',v==='home');render(v);if($('drawer').classList.contains('show'))toggleMenu()}
 function goBack(){showView(state.prevView&&state.prevView!==state.view?state.prevView:'home')}
 function toggleMenu(){$('drawer').classList.toggle('show')}
 function renderNav(){let items=[['home','🏠','Ana'],['coaches','🧑‍🏫','Antrenörler'],['teams','🏐','Takımlar'],['athletes','👥','Sporcular'],['school','🏫','Spor Okulu'],['attendance','📝','Yoklama'],['training','🏋️','Antrenman'],['matches','🏐','Maçlar'],['tests','🧪','Testler'],['tactics','🧠','Taktik'],['messages','💬','İletişim'],['reports','📊','Raporlar'],['notifications','🔔','Bildirimler'],['club','⚙️','Ayarlar']];let make=x=>`<button data-v="${x[0]}" onclick="showView('${x[0]}')">${x[1]}<br>${x[2]}</button>`;$('nav').innerHTML=items.map(make).join('');$('drawerNav').innerHTML=items.map(x=>`<button data-v="${x[0]}" onclick="showView('${x[0]}')">${x[1]} ${x[2]}</button>`).join('')}
 function renderAll(){['home','athletes','teams','coaches','school','attendance','training','matches','tests','tactics','messages','reports','club','notifications'].forEach(render);$('notifCount').textContent=d.notifications.filter(n=>!n.read).length}
-function render(v){if(!$(`${v}`))return;let fn=({home:home,athletes:athletes,teams:teams,coaches:coaches,school:school,attendance:attendance,training:training,matches:matches,tests:tests,tactics:tactics,messages:messages,reports:reports,club:club,notifications:notifications}[v]);if(typeof fn!=='function')return;try{fn()}catch(e){console.error('VolleyScout bölüm hatası:',v,e);$(v).innerHTML=`<div class="card"><h2>⚠️ ${esc(v)} bölümü açılırken bir sorun oluştu.</h2><p class="muted">Veriler korunuyor. Bölüm güvenli modda açılmayı denedi.</p><button class="btn primary" onclick="location.reload()">🔄 Yenile</button></div>`}}
+function render(v){if(!$(`${v}`))return;({home:home,athletes:athletes,teams:teams,coaches:coaches,school:school,attendance:attendance,training:training,matches:matches,tests:tests,tactics:tactics,messages:messages,reports:reports,club:club,notifications:notifications}[v])()}
 function greeting(){let h=new Date().getHours();return h<6?'İyi geceler':h<12?'Günaydın':h<18?'İyi çalışmalar':'İyi akşamlar'}
 function home(){let today=new Date().toISOString().slice(0,10),trs=d.trainings.filter(t=>t.date===today),up=d.matches.filter(m=>m.date>=today).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,2),pending=d.notifications.filter(n=>!n.read).length;$('home').innerHTML=`<div class="hero"><h2>${greeting()} ${esc(d.coach)} 👋</h2><div class="muted">${esc(d.club)} • ${esc(d.season)}</div><div class="grid" style="margin-top:14px"><div><div class="stat">${d.players.length}</div><div class="muted">Sporcu</div></div><div><div class="stat">${d.teams.length}</div><div class="muted">Takım</div></div><div><div class="stat">${d.trainings.length}</div><div class="muted">Antrenman</div></div><div><div class="stat">${pending}</div><div class="muted">Okunmamış</div></div></div></div>
 <div class="section-title"><h2>⚡ Hızlı İşlemler</h2><span class="muted">Diğer tüm bölümler ☰ menüde</span></div>
@@ -279,16 +276,11 @@ function liveMatch(id){
  let last=m.points[m.points.length-1]||{},event=last.event||'a_score',action=last.action||'';
  let opts=a.map(p=>`<option value="${p.id}" ${last.playerId===p.id?'selected':''}>🟧 ${esc(p.name)} #${esc(p.no||'-')}</option>`).join('');
  if(m.internal)opts+=b.map(p=>`<option value="${p.id}" ${last.playerId===p.id?'selected':''}>🔵 ${esc(p.name)} #${esc(p.no||'-')}</option>`).join('');
- let setBadges=Array.from({length:Number(m.sets)||3},(_,i)=>{let s=matchScore(m,i+1),r=(m.setResults||[]).find(x=>x.set===i+1),w=r?(r.winner==='biz'?' 🏆 '+esc(m.team):(r.winner==='rakip'?' 🏆 '+esc(m.internal?m.team2:m.opponent):'')):'';return `<span class="setbadge">${i+1}. set ${s[0]}-${s[1]}${w}</span>`}).join('');
+ let setBadges=Array.from({length:Number(m.sets)||3},(_,i)=>{let s=matchScore(m,i+1);return `<span class="setbadge">${i+1}. set ${s[0]}-${s[1]}</span>`}).join('');
  let labels=m.internal?[['a_score','🟧 '+m.team+' Sayı'],['a_error','🔴 '+m.team+' Hatası'],['a_forced','🟢 '+m.team+' Rakip Hatası'],['b_score','🔵 '+m.team2+' Sayı'],['b_error','🔴 '+m.team2+' Hatası'],['b_forced','🟢 '+m.team2+' Rakip Hatası']]:[['a_score','🟧 '+m.team+' Sayı'],['a_error','🔴 '+m.team+' Hatası'],['a_forced','🟢 '+m.team+' Rakip Hatası'],['b_score','🔵 Rakip Sayı']];
  openModal('⚡ Hızlı Maç Analizi — '+esc(m.team)+' 🆚 '+esc(m.internal?m.team2:m.opponent),`
  <div class="analysis-grid"><div class="mini-stat"><div class="muted">${esc(m.team)}</div><div class="score">${total[0]}</div></div><div class="mini-stat"><div class="muted">${esc(m.internal?m.team2:m.opponent)}</div><div class="score">${total[1]}</div></div><div class="mini-stat"><div class="muted">${current}. Set</div><div class="score">${ss[0]} - ${ss[1]}</div></div><div class="mini-stat"><div class="muted">Aksiyon</div><div class="score">${m.points.length}</div></div></div>
- <br><div class="setbar">
- <b>Setler:</b> ${setBadges}
- <button class="btn" onclick="finishSet('${id}','biz')">🏆 ${esc(m.team)} Seti Kazandı</button>
- ${m.internal?`<button class="btn" onclick="finishSet('${id}','rakip')">🏆 ${esc(m.team2)} Seti Kazandı</button>`:`<button class="btn" onclick="finishSet('${id}','rakip')">🏆 Rakip Seti Kazandı</button>`}
- <button class="btn danger" onclick="finishMatch('${id}')">🏁 Maçı Bitir</button>
-</div>
+ <br><div class="setbar"><b>Setler:</b> ${setBadges} <button class="btn" onclick="finishSet('${id}')">🏁 ${current}. Seti Bitir</button></div>
  <hr><div class="field"><label>Oyuncu</label><select id="q_player"><option value="">Oyuncu seç / rakip sayı için boş bırak</option>${opts}</select></div>
  <div class="field"><label>Olay türü</label><select id="q_result" onchange="refreshMatchAction()">${labels.map(x=>`<option value="${x[0]}" ${x[0]===event?'selected':''}>${x[1]}</option>`).join('')}</select></div>
  <div class="field"><label>Teknik / Hata nedeni</label><select id="q_action">${actionOptions(event,action)}</select></div>
@@ -297,32 +289,7 @@ function liveMatch(id){
  <div class="section-title"><h3>Son 10 kayıt</h3><div class="spacer"></div><button class="btn" onclick="undoPoint('${id}')">↩️ Geri Al</button></div><div id="pointList">${m.points.slice(-10).reverse().map(p=>pointRow(p,m)).join('')||'<div class="card muted">Henüz veri yok.</div>'}</div>
  <hr><div class="actions"><button class="btn" onclick="closeModal()">Kapat</button><button class="btn primary" onclick="matchAnalysis('${id}')">📊 Detaylı Analiz</button><button class="btn" onclick="matchTeamReport('${id}')">📄 Maç PDF</button><button class="btn danger" onclick="deleteMatch('${id}')">🗑️ Sil</button></div>`);
 }
-function finishSet(id,winner){
- let m=d.matches.find(x=>x.id===id);if(!m)return;
- normalizeMatchPoints(m);
- if(m.finished)return toast('Bu maç zaten tamamlandı.');
- let current=m.currentSet||1,max=Number(m.sets)||3;
- m.setResults=Array.isArray(m.setResults)?m.setResults:[];
- if(m.setResults.some(x=>x.set===current))return toast(current+'. set zaten tamamlandı.');
- let score=matchScore(m,current);
- m.setResults.push({set:current,biz:score[0],rakip:score[1],winner:winner||''});
- if(current>=max){
-   m.finished=true;m.finishedAt=new Date().toISOString();m.winner=winner||'';
-   save();liveMatch(id);toast(current+'. set tamamlandı. Maç bitirildi.');return;
- }
- m.currentSet=current+1;
- save();liveMatch(id);toast(current+'. seti tamamlandı. '+m.currentSet+'. sete geçildi.');
-}
-function finishMatch(id){
- let m=d.matches.find(x=>x.id===id);if(!m)return;
- if(m.finished)return toast('Bu maç zaten tamamlandı.');
- if(!confirm('Maçı şimdi bitirmek istediğine emin misin?'))return;
- normalizeMatchPoints(m);
- m.finished=true;m.finishedAt=new Date().toISOString();
- let wins=(m.setResults||[]).reduce((a,x)=>{if(x.winner==='biz')a.biz++;if(x.winner==='rakip')a.rakip++;return a},{biz:0,rakip:0});
- m.winner=wins.biz>wins.rakip?'biz':wins.rakip>wins.biz?'rakip':'';
- save();liveMatch(id);toast('Maç tamamlandı.');
-}
+function finishSet(id){let m=d.matches.find(x=>x.id===id);if(!m)return;normalizeMatchPoints(m);let max=Number(m.sets)||5;if((m.currentSet||1)>=max)return toast('Bu maç için seçilen set sayısına ulaşıldı.');m.currentSet=(m.currentSet||1)+1;save();liveMatch(id);toast((m.currentSet-1)+'. set tamamlandı. '+m.currentSet+'. sete geçildi.');}
 function pointRow(p,m){let name=p.playerId?(d.players.find(x=>x.id===p.playerId)?.name||''):'Oyuncusuz / Rakip',side=p.event?.startsWith('b_')?(m.internal?m.team2:m.opponent):m.team;return `<div class="item"><b>${eventLabel(p.event||p.result,m)}</b> • ${esc(name)} • <strong>${esc(p.action||p.reason||'Diğer')}</strong><div class="muted">${p.set||1}. set • ${p.time||''} • ${esc(side)}</div></div>`}
 function addPoint(id){let m=d.matches.find(x=>x.id===id);if(!m)return;let result=$('pt_side')?.value==='biz'?'biz_sayi':'rakip_sayi',player=$('pt_player')?.value||'',action=$('pt_reason')?.value||'Diğer';m.points.push({id:uid('pt'),side:result==='biz_sayi'?'biz':'rakip',result,playerId:player,action,reason:action,time:new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}),set:m.currentSet||1});save();liveMatch(id);toast('Sayı kaydedildi.')}
 function undoPoint(id){let m=d.matches.find(x=>x.id===id);if(!m||!m.points.length)return toast('Geri alınacak kayıt yok.');m.points.pop();save();liveMatch(id);toast('Son kayıt geri alındı.')}
@@ -516,7 +483,7 @@ save();
 boot();
 
 // FINAL PWA cache/version guard
-try{if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(rs=>{let had=!!navigator.serviceWorker.controller;Promise.all(rs.map(r=>r.unregister())).then(()=>{if(had&&!sessionStorage.getItem('vs_sw_reloaded')){sessionStorage.setItem('vs_sw_reloaded','1');location.reload();}});});}}catch(e){}
+try{if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister()));}}catch(e){}
 </script>
 </body>
 </html>
